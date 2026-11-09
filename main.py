@@ -47,11 +47,13 @@ import uuid
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 # Load environment variables from .env file
@@ -831,6 +833,28 @@ app.add_middleware(
     allow_headers=["*"],
     max_age=600,
 )
+
+BASE_DIR = Path(__file__).resolve().parent
+
+
+# ---------------------------------------------------------------------------
+# UI routes (serve the dashboard and demo pages from the same origin)
+# ---------------------------------------------------------------------------
+@app.get("/", response_class=HTMLResponse)
+async def serve_homepage():
+    return FileResponse(BASE_DIR / "index.html")
+
+
+@app.get("/{page_name}.html", response_class=HTMLResponse)
+async def serve_html_pages(page_name: str):
+    # Resolve inside the project root: a backslash survives the single-segment
+    # path converter on Windows, so "../..\secret" would otherwise escape it.
+    file_path = (BASE_DIR / f"{page_name}.html").resolve()
+    if file_path.parent == BASE_DIR and file_path.is_file():
+        return FileResponse(file_path)
+    # Returning a dict here would be rendered through HTMLResponse and crash;
+    # send an explicit 404 JSON payload instead.
+    return JSONResponse({"error": "Page not found"}, status_code=404)
 
 
 # ---------------------------------------------------------------------------
