@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/(.*\\.html)", "destination": "/$1" },
+    { "source": "/(.*)", "destination": "/main.py" }
+  ]
+}
