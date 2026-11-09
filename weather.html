@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SkyCast — Local Forecast</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:    '#05070d',
+          card:   '#0c1420',
+          card2:  '#121e2e',
+          sky1:   '#7dd3fc',
+          sky2:   '#38bdf8',
+          ok:     '#22c55e',
+          danger: '#ef4444',
+        },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        boxShadow: {
+          sky: '0 10px 30px -8px rgba(56,189,248,.45)',
+        },
+        keyframes: {
+          slidein: {
+            '0%':   { opacity: 0, transform: 'translateY(-16px)' },
+            '100%': { opacity: 1, transform: 'translateY(0)' },
+          },
+          fadeout: {
+            '0%':   { opacity: 1 },
+            '100%': { opacity: 0 },
+          },
+          floaty: {
+            '0%,100%': { transform: 'translateY(0)' },
+            '50%':     { transform: 'translateY(-6px)' },
+          },
+          reveal: {
+            '0%':   { opacity: 0, transform: 'translateY(8px)' },
+            '100%': { opacity: 1, transform: 'translateY(0)' },
+          },
+        },
+        animation: {
+          slidein: 'slidein .3s cubic-bezier(.2,.8,.2,1) 1',
+          fadeout: 'fadeout .35s ease-in 1 forwards',
+          floaty: 'floaty 5s ease-in-out infinite',
+          reveal: 'reveal .35s cubic-bezier(.2,.8,.2,1) 1',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  html, body { background: #05070d; }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% -10%, rgba(125,211,252,.18), transparent 60%);
+  }
+  .logo-mark { background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%); }
+</style>
+</head>
+<body class="font-sans text-slate-200 min-h-screen flex items-center justify-center p-4">
+
+  <!-- ================= PHONE FRAME ================= -->
+  <div class="relative w-full max-w-sm">
+
+    <!-- Toasts -->
+    <div id="toasts" role="status" aria-live="polite" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 space-y-2"></div>
+
+    <div class="relative rounded-[2rem] border border-white/10 bg-card overflow-hidden shadow-[0_50px_120px_-40px_rgba(0,0,0,.95)] ring-1 ring-white/[.04]">
+
+      <!-- ============ HEADER ============ -->
+      <header class="relative px-5 pt-6 pb-8 bg-gradient-to-br from-sky2/90 to-sky1/70">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl logo-mark flex items-center justify-center shadow-sky">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 014-4 5.5 5.5 0 0110.6 1.4A3.5 3.5 0 0117.5 19H7a4 4 0 01-4-4z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-white font-bold leading-tight">SkyCast</p>
+            <p class="text-[11px] text-white/70 tracking-wide">Local Forecast</p>
+          </div>
+          <div class="ml-auto flex items-center gap-1.5">
+            <span id="linkDot" class="w-2 h-2 rounded-full bg-white/50 animate-pulse"></span>
+            <span id="linkText" class="text-[10px] uppercase tracking-widest text-white/80">linking</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============ BODY ============ -->
+      <main class="-mt-4 px-4 pb-6 space-y-4">
+
+        <!-- ========== SECTION 1 · WEATHER FORECAST ========== -->
+        <section class="rounded-2xl border border-white/10 bg-card2 p-5 shadow-lg ring-1 ring-inset ring-white/[.03] transition duration-300 ease-in-out hover:border-white/20">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-[11px] uppercase tracking-widest text-sky1/70">City Forecast</p>
+              <p id="locName" class="text-lg font-bold text-white mt-1">Enter a city</p>
+            </div>
+            <div id="conditionGlyph" class="text-4xl animate-floaty">⛅</div>
+          </div>
+
+          <!-- Search -->
+          <div class="mt-4 flex items-stretch gap-2">
+            <div class="relative flex-1 min-w-0">
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"
+                   fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7" />
+                <path stroke-linecap="round" d="M20 20l-3.5-3.5" />
+              </svg>
+              <input id="cityInput" type="text" placeholder="Enter City" autocomplete="off"
+                class="w-full rounded-xl border border-white/15 bg-ink/70 pl-9 pr-3 py-3 text-sm text-white
+                       placeholder:text-slate-500
+                       focus:outline-none focus:border-sky1 focus:ring-2 focus:ring-sky1/40 transition duration-300 ease-in-out" />
+            </div>
+            <button id="btnForecast"
+              class="shrink-0 inline-flex items-center gap-2 rounded-xl px-4 py-3
+                     logo-mark text-sm font-semibold text-white shadow-sky
+                     active:scale-[.97] transition duration-300 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100">
+              Get Forecast
+            </button>
+          </div>
+
+          <!-- Forecast result -->
+          <div id="forecastResult" class="hidden mt-4 animate-reveal">
+            <div class="flex items-end gap-2">
+              <p class="text-4xl font-extrabold text-white tabular-nums"><span id="tempValue">25</span><span class="text-2xl align-top">°C</span></p>
+              <p id="conditionText" class="text-sm text-sky1 mb-1 font-medium">Partly Cloudy</p>
+            </div>
+            <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div class="rounded-xl border border-white/10 bg-card p-2 transition duration-300 ease-in-out hover:border-sky1/40">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Humidity</p>
+                <p id="humidityValue" class="text-sm font-semibold text-sky1 mt-0.5 tabular-nums">60%</p>
+              </div>
+              <div class="rounded-xl border border-white/10 bg-card p-2 transition duration-300 ease-in-out hover:border-sky1/40">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Wind</p>
+                <p id="windValue" class="text-sm font-semibold text-sky1 mt-0.5 tabular-nums">11 km/h</p>
+              </div>
+              <div class="rounded-xl border border-white/10 bg-card p-2 transition duration-300 ease-in-out hover:border-sky1/40">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Feels</p>
+                <p id="feelsValue" class="text-sm font-semibold text-sky1 mt-0.5 tabular-nums">25°C</p>
+              </div>
+            </div>
+            <p id="resultSummary" class="mt-3 text-[11px] text-slate-400">
+              25°C, Partly Cloudy, Humidity 60%
+            </p>
+            <p id="updatedAt" class="mt-1 text-[10px] uppercase tracking-widest text-slate-600"></p>
+          </div>
+        </section>
+
+        <!-- ========== SECTION 2 · APP DIAGNOSTICS (PERMISSION TESTER) ========== -->
+        <section class="rounded-2xl border border-dashed border-sky1/40 bg-sky1/[.04] p-4 shadow-lg ring-1 ring-inset ring-sky1/[.06] transition duration-300 ease-in-out hover:border-sky1/60 hover:bg-sky1/[.06]">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-base leading-none">🧪</span>
+            <div>
+              <p class="text-[11px] uppercase tracking-widest text-sky1">App Diagnostics</p>
+              <p class="text-[10px] text-slate-500">Permission tester · E.D.I.T.H. policy check</p>
+            </div>
+            <span class="ml-auto w-1.5 h-1.5 rounded-full bg-sky1 animate-pulse"></span>
+          </div>
+
+          <label for="resourceSelect"
+                 class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">
+            Requested Resource
+          </label>
+
+          <div class="flex items-stretch gap-2">
+            <div class="relative flex-1 min-w-0">
+              <select id="resourceSelect"
+                class="w-full appearance-none rounded-xl border border-white/15 bg-ink/70
+                       pl-3 pr-9 py-3 text-sm text-white
+                       focus:outline-none focus:border-sky1 focus:ring-2 focus:ring-sky1/40
+                       transition duration-300 ease-in-out disabled:opacity-50">
+                <option value="location">location</option>
+                <option value="contacts">contacts</option>
+                <option value="microphone">microphone</option>
+                <option value="sms">sms</option>
+                <option value="camera">camera</option>
+                <option value="files">files</option>
+                <option value="calendar">calendar</option>
+                <option value="bluetooth">bluetooth</option>
+                <option value="storage">storage</option>
+                <option value="network">network</option>
+              </select>
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sky1"
+                   fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+              </svg>
+            </div>
+
+            <button id="btnRequest"
+              class="shrink-0 inline-flex items-center gap-2 rounded-xl px-4 py-3
+                     border border-sky1/40 bg-sky1/10 text-sm font-semibold text-white
+                     hover:bg-sky1/20 active:scale-[.97] transition duration-300 ease-in-out
+                     disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100">
+              <span>Request Access</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4"
+                   fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <p id="requestStatus" role="status" aria-live="polite" class="hidden"></p>
+        </section>
+      </main>
+
+      <footer class="px-5 pb-5 text-center">
+        <p class="text-[10px] tracking-widest uppercase text-slate-600">Secured by E.D.I.T.H.</p>
+      </footer>
+    </div>
+
+    <p class="text-center text-[10px] tracking-widest uppercase text-slate-600 mt-3">
+      demo build · endpoint 127.0.0.1:8000
+    </p>
+  </div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const API = "http://127.0.0.1:8000";
+const APP_NAME = "WeatherApp";
+const TOAST_LIFETIME = 3200;
+const TOAST_LIMIT = 3;
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+const toastRoot = document.getElementById("toasts");
+
+const esc = (value) =>
+  String(value).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+
+function dismissToast(el) {
+  if (!el || el.dataset.leaving) return;
+  el.dataset.leaving = "1";
+  el.classList.remove("animate-slidein");
+  el.classList.add("animate-fadeout");
+  window.setTimeout(() => el.remove(), 380);
+}
+
+function showToast(kind, title, detail) {
+  const isOk = kind === "ok";
+  const el = document.createElement("div");
+  el.className =
+    `animate-slidein flex items-start gap-3 rounded-2xl border px-4 py-3
+     backdrop-blur-xl
+     ${isOk
+        ? "border-ok/40 bg-ok/10 text-ok shadow-[0_24px_60px_-28px_rgba(34,197,94,.65)]"
+        : "border-danger/40 bg-danger/10 text-danger shadow-[0_24px_60px_-28px_rgba(239,68,68,.65)]"}`;
+
+  el.innerHTML = `
+    <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border text-[11px] font-bold
+      ${isOk ? "border-ok/40 bg-ok/15" : "border-danger/40 bg-danger/15"}">${isOk ? "✓" : "✕"}</span>
+    <div class="min-w-0">
+      <p class="text-sm font-bold">${esc(title)}</p>
+      ${detail ? `<p class="mt-0.5 text-[11px] opacity-80 break-words">${esc(detail)}</p>` : ""}
+    </div>
+  `;
+
+  toastRoot.appendChild(el);
+
+  // Never let the stack grow: drop the oldest entries instantly.
+  while (toastRoot.children.length > TOAST_LIMIT) {
+    const oldest = toastRoot.firstElementChild;
+    if (!oldest) break;
+    oldest.remove();
+  }
+
+  window.setTimeout(() => dismissToast(el), TOAST_LIFETIME);
+}
+
+/* ============================================================
+   CONNECTION INDICATOR
+   ============================================================ */
+const linkDot = document.getElementById("linkDot");
+const linkText = document.getElementById("linkText");
+
+function setLink(online) {
+  if (online) {
+    linkDot.className = "w-2 h-2 rounded-full bg-white animate-pulse";
+    linkText.textContent = "secure";
+  } else {
+    linkDot.className = "w-2 h-2 rounded-full bg-danger";
+    linkText.textContent = "offline";
+  }
+}
+
+/* ============================================================
+   SECTION 1 · FORECAST (deterministic local demo data)
+   ============================================================ */
+const cityInput      = document.getElementById("cityInput");
+const btnForecast    = document.getElementById("btnForecast");
+const forecastResult = document.getElementById("forecastResult");
+const locName        = document.getElementById("locName");
+const resultSummary  = document.getElementById("resultSummary");
+const conditionGlyph = document.getElementById("conditionGlyph");
+const tempValue      = document.getElementById("tempValue");
+const conditionText  = document.getElementById("conditionText");
+const humidityValue  = document.getElementById("humidityValue");
+const windValue      = document.getElementById("windValue");
+const feelsValue     = document.getElementById("feelsValue");
+const updatedAt      = document.getElementById("updatedAt");
+
+const CONDITIONS = [
+  { label: "Clear Sky",       glyph: "☀️" },
+  { label: "Partly Cloudy",   glyph: "⛅" },
+  { label: "Overcast",        glyph: "☁️" },
+  { label: "Light Rain",      glyph: "🌦️" },
+  { label: "Thunderstorms",   glyph: "⛈️" },
+];
+
+/* Stable per-city pseudo-random so the same city always reports the same sky. */
+function seededRandom(text) {
+  let seed = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    seed ^= text.charCodeAt(i);
+    seed = Math.imul(seed, 16777619);
+  }
+  return () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+}
+
+let forecastTimer = null;
+let forecastBusy = false;
+const FORECAST_LABEL = btnForecast.innerHTML;
+
+function getForecast() {
+  if (forecastBusy) return;
+
+  const raw = cityInput.value.trim();
+
+  if (!raw) {
+    cityInput.focus();
+    showToast("error", "City required", "Type a city name to fetch its forecast.");
+    return;
+  }
+
+  const city = /[A-Z]/.test(raw) ? raw : raw.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1));
+  const rand = seededRandom(city.toLowerCase());
+  const condition = CONDITIONS[Math.floor(rand() * CONDITIONS.length)];
+  const temp = 16 + Math.floor(rand() * 19);
+  const humidity = 35 + Math.floor(rand() * 51);
+  const wind = 4 + Math.floor(rand() * 23);
+  const feels = temp + (humidity > 70 ? 2 : humidity < 40 ? -1 : 0);
+
+  locName.textContent = city;
+  conditionGlyph.textContent = condition.glyph;
+  tempValue.textContent = String(temp);
+  conditionText.textContent = condition.label;
+  humidityValue.textContent = humidity + "%";
+  windValue.textContent = wind + " km/h";
+  feelsValue.textContent = feels + "°C";
+  resultSummary.textContent = temp + "°C, " + condition.label + ", Humidity " + humidity + "%";
+  updatedAt.textContent = "updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  // Brief "scanning" beat so the result feels fetched, not canned.
+  forecastBusy = true;
+  btnForecast.disabled = true;
+  btnForecast.innerHTML = '<span class="animate-pulse">Scanning…</span>';
+  window.clearTimeout(forecastTimer);
+  forecastTimer = window.setTimeout(() => {
+    forecastResult.classList.remove("hidden");
+    forecastResult.classList.remove("animate-reveal");
+    void forecastResult.offsetWidth;
+    forecastResult.classList.add("animate-reveal");
+    forecastBusy = false;
+    btnForecast.disabled = false;
+    btnForecast.innerHTML = FORECAST_LABEL;
+  }, 420);
+}
+
+btnForecast.addEventListener("click", getForecast);
+cityInput.addEventListener("keydown", (e) => { if (e.key === "Enter") getForecast(); });
+
+/* ============================================================
+   SECTION 2 · APP DIAGNOSTICS (permission tester)
+   ============================================================ */
+const selectEl   = document.getElementById("resourceSelect");
+const btnRequest = document.getElementById("btnRequest");
+const statusEl   = document.getElementById("requestStatus");
+
+const ARROW_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4"
+  fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" /></svg>`;
+
+const SPINNER = `<svg class="w-3.5 h-3.5 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none">
+  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".3" stroke-width="3"/>
+  <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>`;
+
+function setStatus(tone, markup) {
+  const tones = {
+    wait:  "mt-3 flex items-center gap-2 text-[11px] leading-relaxed text-sky1",
+    ok:    "mt-3 flex items-center gap-2 text-[11px] leading-relaxed text-ok",
+    error: "mt-3 flex items-center gap-2 text-[11px] leading-relaxed text-danger",
+  };
+  statusEl.className = tones[tone];   // also drops the initial `hidden`
+  statusEl.innerHTML = markup;
+}
+
+async function requestAccess() {
+  const resource = selectEl.value;
+  const label = selectEl.options[selectEl.selectedIndex].text;
+
+  // --- Waiting state: the backend parks the request until an admin decides ---
+  btnRequest.disabled = true;
+  selectEl.disabled = true;
+  btnRequest.innerHTML = `${SPINNER}<span>Waiting…</span>`;
+  setStatus("wait", `${SPINNER}<span>Waiting for E.D.I.T.H. approval…</span>`);
+
+  try {
+    const res = await fetch(API + "/request_access", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ app_name: APP_NAME, requested_resource: resource }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "HTTP " + res.status);
+
+    setLink(true);
+
+    if (data.status === "Allowed") {
+      showToast("ok", "Access Granted", `WeatherApp may use ${label}`);
+      setStatus("ok", `<span>✓</span><span>Access granted to ${label}.</span>`);
+    } else {
+      showToast("error", "Access Denied by E.D.I.T.H.", `${label} request blocked`);
+      setStatus("error", `<span>✕</span><span>Access denied for ${label}.</span>`);
+    }
+  } catch (err) {
+    setLink(false);
+    showToast("error", "Access Denied by E.D.I.T.H.", err.message || "Backend unreachable");
+    setStatus("error", `<span>✕</span><span>No response from E.D.I.T.H.</span>`);
+  } finally {
+    btnRequest.disabled = false;
+    selectEl.disabled = false;
+    btnRequest.innerHTML = `Request Access ${ARROW_ICON}`;
+  }
+}
+
+btnRequest.addEventListener("click", requestAccess);
+</script>
+</body>
+</html>

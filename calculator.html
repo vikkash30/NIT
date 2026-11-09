@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calculator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:    '#05070d',
+          card:   '#0e1013',
+          card2:  '#171a1f',
+          key:    '#23272e',
+          key2:   '#2e333b',
+          amber1: '#fbbf24',
+          amber2: '#f59e0b',
+          ok:     '#22c55e',
+          danger: '#ef4444',
+        },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        boxShadow: {
+          amber: '0 10px 30px -8px rgba(245,158,11,.45)',
+        },
+        keyframes: {
+          slidein: {
+            '0%':   { opacity: 0, transform: 'translateY(-16px)' },
+            '100%': { opacity: 1, transform: 'translateY(0)' },
+          },
+          fadeout: {
+            '0%':   { opacity: 1 },
+            '100%': { opacity: 0 },
+          },
+        },
+        animation: {
+          slidein: 'slidein .3s cubic-bezier(.2,.8,.2,1) 1',
+          fadeout: 'fadeout .35s ease-in 1 forwards',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  html, body { background: #05070d; }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% -10%, rgba(245,158,11,.16), transparent 60%);
+  }
+  .logo-mark { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); }
+</style>
+</head>
+<body class="font-sans text-slate-200 min-h-screen flex items-center justify-center p-4">
+
+  <!-- ================= PHONE FRAME ================= -->
+  <div class="relative w-full max-w-sm">
+
+    <!-- Toasts -->
+    <div id="toasts" role="status" aria-live="polite" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 space-y-2"></div>
+
+    <div class="relative rounded-[2rem] border border-white/10 bg-card overflow-hidden shadow-[0_50px_120px_-40px_rgba(0,0,0,.95)] ring-1 ring-white/[.04]">
+
+      <!-- ============ HEADER ============ -->
+      <header class="px-5 pt-6 pb-5 bg-gradient-to-br from-amber2/25 to-transparent border-b border-white/5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl logo-mark flex items-center justify-center font-extrabold text-black shadow-amber">
+            ∑
+          </div>
+          <div>
+            <p class="text-white font-bold leading-tight">Calculator</p>
+            <p class="text-[11px] text-slate-400 tracking-wide">Standard · Voice Enabled</p>
+          </div>
+          <div class="ml-auto flex items-center gap-1.5">
+            <span id="linkDot" class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
+            <span id="linkText" class="text-[10px] uppercase tracking-widest text-slate-400">linking</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============ DISPLAY ============ -->
+      <div class="px-5 py-6">
+        <div class="rounded-2xl border border-white/10 bg-black/50 px-4 py-5 text-right ring-1 ring-inset ring-white/[.04]">
+          <p class="text-[11px] tracking-widest uppercase text-slate-500">result</p>
+          <p id="display" class="text-4xl font-extrabold text-white mt-1 tracking-tight tabular-nums transition duration-200 ease-in-out">1,248</p>
+          <p id="subDisplay" class="text-[11px] text-amber1/80 mt-1">128 × 9.75</p>
+        </div>
+      </div>
+
+      <!-- ============ KEYPAD ============ -->
+      <div id="keypad" role="group" aria-label="Calculator keypad" class="px-5 grid grid-cols-4 gap-2.5">
+        <button data-key="AC" class="h-12 select-none rounded-xl bg-key2 text-slate-200 font-semibold transition duration-200 ease-in-out hover:bg-white/10 active:scale-95">AC</button>
+        <button data-key="±" class="h-12 select-none rounded-xl bg-key2 text-slate-200 font-semibold transition duration-200 ease-in-out hover:bg-white/10 active:scale-95">±</button>
+        <button data-key="%" class="h-12 select-none rounded-xl bg-key2 text-slate-200 font-semibold transition duration-200 ease-in-out hover:bg-white/10 active:scale-95">%</button>
+        <button data-key="÷" aria-label="divide" class="h-12 select-none rounded-xl bg-amber2/80 text-black font-bold transition duration-200 ease-in-out hover:bg-amber1 active:scale-95">÷</button>
+
+        <button data-key="7" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">7</button>
+        <button data-key="8" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">8</button>
+        <button data-key="9" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">9</button>
+        <button data-key="×" aria-label="multiply" class="h-12 select-none rounded-xl bg-amber2/80 text-black font-bold transition duration-200 ease-in-out hover:bg-amber1 active:scale-95">×</button>
+
+        <button data-key="4" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">4</button>
+        <button data-key="5" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">5</button>
+        <button data-key="6" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">6</button>
+        <button data-key="−" aria-label="subtract" class="h-12 select-none rounded-xl bg-amber2/80 text-black font-bold transition duration-200 ease-in-out hover:bg-amber1 active:scale-95">−</button>
+
+        <button data-key="1" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">1</button>
+        <button data-key="2" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">2</button>
+        <button data-key="3" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">3</button>
+        <button data-key="+" aria-label="add" class="h-12 select-none rounded-xl bg-amber2/80 text-black font-bold transition duration-200 ease-in-out hover:bg-amber1 active:scale-95">+</button>
+
+        <button data-key="0" class="h-12 col-span-2 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">0</button>
+        <button data-key="." aria-label="decimal point" class="h-12 select-none rounded-xl bg-key text-white font-semibold transition duration-200 ease-in-out hover:bg-key2 active:scale-95">.</button>
+        <button data-key="=" aria-label="equals" class="h-12 select-none rounded-xl bg-amber1 text-black font-bold shadow-amber transition duration-200 ease-in-out hover:bg-amber2 active:scale-95">=</button>
+      </div>
+
+      <!-- ============ SMART ACTIONS ============ -->
+      <main class="px-5 py-6 space-y-4">
+
+        <section class="rounded-2xl border border-white/10 bg-card2 p-4 shadow-lg ring-1 ring-inset ring-white/[.03] transition duration-300 ease-in-out hover:border-white/20 space-y-3">
+          <p class="text-[11px] uppercase tracking-widest text-slate-400">Smart Actions</p>
+
+          <!-- Normal -->
+          <button id="btnVoice"
+            class="w-full rounded-xl border border-amber1/40 bg-amber1/10 px-4 py-3.5
+                   flex items-center gap-3 text-left
+                   hover:bg-amber1/20 hover:shadow-amber active:scale-[.98] transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100">
+            <span class="w-9 h-9 rounded-lg bg-amber1/15 border border-amber1/40 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-amber1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4a3 3 0 013 3v5a3 3 0 01-6 0V7a3 3 0 013-3z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-14 0M12 18v3" />
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-sm font-semibold text-white">Use Voice Calculation</span>
+              <span class="block text-[10px] text-slate-400">needs microphone</span>
+            </span>
+          </button>
+
+          <!-- Malicious -->
+          <button id="btnSync"
+            class="w-full rounded-xl border border-danger/40 bg-danger/10 px-4 py-3.5
+                   flex items-center gap-3 text-left
+                   hover:bg-danger/20 hover:shadow-danger active:scale-[.98] transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100">
+            <span class="w-9 h-9 rounded-lg bg-danger/15 border border-danger/40 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 0113.7-5.6M20 12a8 8 0 01-13.7 5.6M17 4v3h-3M7 20v-3h3" />
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-sm font-semibold text-white">Sync Calculator History</span>
+              <span class="block text-[10px] text-danger/80">requests contacts</span>
+            </span>
+          </button>
+        </section>
+
+        <!-- Permission console -->
+        <section class="rounded-2xl border border-white/10 bg-card2 p-4 shadow-lg ring-1 ring-inset ring-white/[.03] transition duration-300 ease-in-out hover:border-white/20">
+          <p class="text-[11px] uppercase tracking-widest text-slate-400 mb-3">Permission Activity</p>
+          <div id="console" class="h-24 overflow-y-auto text-[11px] leading-relaxed text-slate-400 space-y-1">
+            <p class="text-slate-600">No activity yet.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="px-5 pb-5 text-center">
+        <p class="text-[10px] tracking-widest uppercase text-slate-600">Secured by E.D.I.T.H.</p>
+      </footer>
+    </div>
+
+    <p class="text-center text-[10px] tracking-widest uppercase text-slate-600 mt-3">
+      demo build · endpoint 127.0.0.1:8000
+    </p>
+  </div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const API = "http://127.0.0.1:8000";
+const APP_NAME = "Calculator";
+const TOAST_LIFETIME = 3200;
+const TOAST_LIMIT = 3;
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+const toastRoot = document.getElementById("toasts");
+
+const esc = (value) =>
+  String(value).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+
+function dismissToast(el) {
+  if (!el || el.dataset.leaving) return;
+  el.dataset.leaving = "1";
+  el.classList.remove("animate-slidein");
+  el.classList.add("animate-fadeout");
+  window.setTimeout(() => el.remove(), 380);
+}
+
+function showToast(kind, title, detail) {
+  const isOk = kind === "ok";
+  const el = document.createElement("div");
+  el.className =
+    `animate-slidein flex items-start gap-3 rounded-2xl border px-4 py-3
+     backdrop-blur-xl
+     ${isOk
+        ? "border-ok/40 bg-ok/10 text-ok shadow-[0_24px_60px_-28px_rgba(34,197,94,.65)]"
+        : "border-danger/40 bg-danger/10 text-danger shadow-[0_24px_60px_-28px_rgba(239,68,68,.65)]"}`;
+
+  el.innerHTML = `
+    <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border text-[11px] font-bold
+      ${isOk ? "border-ok/40 bg-ok/15" : "border-danger/40 bg-danger/15"}">${isOk ? "✓" : "✕"}</span>
+    <div class="min-w-0">
+      <p class="text-sm font-bold">${esc(title)}</p>
+      ${detail ? `<p class="mt-0.5 text-[11px] opacity-80 break-words">${esc(detail)}</p>` : ""}
+    </div>
+  `;
+
+  toastRoot.appendChild(el);
+
+  // Never let the stack grow: drop the oldest entries instantly.
+  while (toastRoot.children.length > TOAST_LIMIT) {
+    const oldest = toastRoot.firstElementChild;
+    if (!oldest) break;
+    oldest.remove();
+  }
+
+  window.setTimeout(() => dismissToast(el), TOAST_LIFETIME);
+}
+
+/* ============================================================
+   CONSOLE
+   ============================================================ */
+const consoleEl = document.getElementById("console");
+let consoleEmpty = true;
+
+function logConsole(resource, status) {
+  if (consoleEmpty) {
+    consoleEl.innerHTML = "";
+    consoleEmpty = false;
+  }
+  const allowed = status === "Allowed";
+  const line = document.createElement("div");
+  line.className = "flex gap-2";
+  line.innerHTML = `
+    <span class="text-slate-600 shrink-0">${new Date().toLocaleTimeString()}</span>
+    <span class="text-slate-400 shrink-0">requested ${resource}</span>
+    <span class="ml-auto shrink-0 font-bold ${allowed ? "text-ok" : "text-danger"}">${status}</span>
+  `;
+  consoleEl.prepend(line);
+  while (consoleEl.children.length > 40) consoleEl.lastChild.remove();
+}
+
+/* ============================================================
+   CONNECTION INDICATOR
+   ============================================================ */
+const linkDot = document.getElementById("linkDot");
+const linkText = document.getElementById("linkText");
+
+function setLink(online) {
+  if (online) {
+    linkDot.className = "w-2 h-2 rounded-full bg-white animate-pulse";
+    linkText.textContent = "secure";
+  } else {
+    linkDot.className = "w-2 h-2 rounded-full bg-danger";
+    linkText.textContent = "offline";
+  }
+}
+
+/* ============================================================
+   CALCULATOR ENGINE
+   ============================================================ */
+const displayEl = document.getElementById("display");
+const subDisplayEl = document.getElementById("subDisplay");
+const keypad = document.getElementById("keypad");
+
+const OP_SYMBOL = { "+": "+", "−": "-", "×": "*", "÷": "/" };
+const MAX_DIGITS = 12;
+
+let current = "1248";
+let accumulator = null;
+let pendingOp = null;
+let justEvaluated = true;      // true right after "=" or an operator
+let expression = "128 × 9.75";
+
+const groupInt = (digits) => {
+  if (!digits) return "0";
+  const neg = digits.startsWith("-");
+  const body = (neg ? digits.slice(1) : digits).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (neg ? "-" : "") + (body || "0");
+};
+
+function formatNumber(value) {
+  if (!Number.isFinite(value)) return "Error";
+  const abs = Math.abs(value);
+  if (abs !== 0 && (abs >= 1e12 || abs < 1e-7)) {
+    return value.toExponential(6).replace("e", "e");
+  }
+  const rounded = Number(value.toPrecision(12));
+  const [int, frac] = String(rounded).split(".");
+  return groupInt(int) + (frac ? "." + frac : "");
+}
+
+function renderDisplay() {
+  if (current === "Error") {
+    displayEl.textContent = "Error";
+  } else {
+    const [int, frac] = current.split(".");
+    displayEl.textContent = groupInt(int) + (frac !== undefined ? "." + frac : "");
+  }
+  subDisplayEl.textContent = expression || "\u00a0";
+}
+
+function compute(a, op, b) {
+  switch (op) {
+    case "+": return a + b;
+    case "−": return a - b;
+    case "×": return a * b;
+    case "÷": return b === 0 ? NaN : a / b;
+    default: return b;
+  }
+}
+
+function resetAll() {
+  current = "0";
+  accumulator = null;
+  pendingOp = null;
+  justEvaluated = false;
+  expression = "";
+}
+
+function pressKey(key) {
+  if (current === "Error" && key !== "AC") resetAll();
+
+  if (/^[0-9]$/.test(key)) {
+    if (justEvaluated) {
+      if (pendingOp === null) expression = "";
+      current = "";
+      justEvaluated = false;
+    }
+    if (current.replace(/[-.]/g, "").length >= MAX_DIGITS) return;
+    if (current === "0") current = key;
+    else if (current === "-0") current = "-" + key;
+    else current += key;
+  } else if (key === ".") {
+    if (justEvaluated) {
+      if (pendingOp === null) expression = "";
+      current = "0";
+      justEvaluated = false;
+    }
+    if (!current.includes(".")) current += ".";
+  } else if (key === "AC") {
+    resetAll();
+  } else if (key === "±") {
+    current = current.startsWith("-") ? current.slice(1) || "0" : (current === "0" ? "0" : "-" + current);
+  } else if (key === "%") {
+    current = String(parseFloat(current || "0") / 100);
+  } else if (OP_SYMBOL[key]) {
+    if (justEvaluated && pendingOp !== null) {
+      // Chain-pressed operators replace each other instead of computing.
+      pendingOp = key;
+      expression = formatNumber(accumulator) + " " + key;
+      renderDisplay();
+      return;
+    }
+    const value = parseFloat(current || "0");
+    if (pendingOp !== null) {
+      const result = compute(accumulator, pendingOp, value);
+      current = Number.isFinite(result) ? String(Number(result.toPrecision(12))) : "Error";
+      accumulator = Number.isFinite(result) ? result : null;
+    } else {
+      accumulator = value;
+      current = String(value);
+    }
+    pendingOp = key;
+    expression = formatNumber(accumulator) + " " + key;
+    justEvaluated = true;
+  } else if (key === "=") {
+    if (pendingOp !== null) {
+      const rhs = parseFloat(current || "0");
+      const result = compute(accumulator, pendingOp, rhs);
+      expression = formatNumber(accumulator) + " " + pendingOp + " " + formatNumber(rhs) + " =";
+      current = Number.isFinite(result) ? String(Number(result.toPrecision(12))) : "Error";
+      accumulator = null;
+      pendingOp = null;
+    }
+    justEvaluated = true;
+  }
+
+  renderDisplay();
+}
+
+function backspace() {
+  if (justEvaluated || current === "Error") return;
+  current = current.length > 1 ? current.slice(0, -1) : "0";
+  if (current === "-") current = "0";
+  renderDisplay();
+}
+
+keypad.addEventListener("click", (event) => {
+  const key = event.target.closest("[data-key]");
+  if (key) pressKey(key.dataset.key);
+});
+
+window.addEventListener("keydown", (event) => {
+  const map = { "*": "×", "/": "÷", "-": "−", "+": "+", ".": ".", "%": "%", Enter: "=", "=": "=", Escape: "AC", Delete: "AC" };
+  if (/^[0-9]$/.test(event.key)) { pressKey(event.key); return; }
+  if (event.key === "Backspace") { backspace(); event.preventDefault(); return; }
+  if (map[event.key]) { pressKey(map[event.key]); event.preventDefault(); }
+});
+
+renderDisplay();
+
+/* ============================================================
+   ACTION
+   ============================================================ */
+const VERIFYING = '<span class="mx-auto flex items-center gap-2 text-sm font-semibold text-white/70">' +
+  '<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">' +
+  '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".3" stroke-width="3"/>' +
+  '<path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>' +
+  '<span>Verifying with E.D.I.T.H.…</span></span>';
+
+async function requestAccess(resource, button) {
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = VERIFYING;
+
+  try {
+    const res = await fetch(API + "/request_access", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ app_name: APP_NAME, requested_resource: resource }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "HTTP " + res.status);
+
+    setLink(true);
+    logConsole(resource, data.status);
+
+    if (data.status === "Allowed") {
+      showToast("ok", "Access Granted", `${resource} is permitted for ${APP_NAME}`);
+    } else {
+      showToast("error", "Access Denied by E.D.I.T.H.", `${resource} is blocked for ${APP_NAME}`);
+    }
+  } catch (err) {
+    setLink(false);
+    logConsole(resource, "ERROR");
+    showToast("error", "Access Denied by E.D.I.T.H.", err.message || "Backend unreachable");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = original;
+  }
+}
+
+const btnVoice = document.getElementById("btnVoice");
+const btnSync = document.getElementById("btnSync");
+
+btnVoice.addEventListener("click", () => requestAccess("microphone", btnVoice));
+btnSync.addEventListener("click", () => requestAccess("contacts", btnSync));
+</script>
+</body>
+</html>

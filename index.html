@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E.D.I.T.H. — Security Operations Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            void: '#f8fafc',
+            panel: '#ffffff',
+            panel2: '#f1f5f9',
+            grid: '#e2e8f0',
+            danger: '#e11d48',
+            ok: '#059669',
+            amber: '#d97706',
+            flame: '#ea580c',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          keyframes: {
+            pulseglow: { '0%,100%': { opacity: 1 }, '50%': { opacity: .4 } },
+            radar: { '0%': { transform: 'rotate(0)' }, '100%': { transform: 'rotate(360deg)' } },
+          },
+          animation: {
+            pulseglow: 'pulseglow 2s ease-in-out infinite',
+            radar: 'radar 1.1s linear infinite',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --sev: 225 29 72;
+    }
+
+    html,
+    body {
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    body {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    .aurora {
+      display: none;
+    }
+
+    /* Crisp White Surfaces & Subtle Drop Shadows */
+    .glass {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    }
+
+    .hud {
+      position: relative;
+    }
+
+    .hud::before,
+    .hud::after {
+      display: none;
+    }
+
+    .panel-title {
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      text-transform: none;
+      color: #0f172a;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    /* Nav */
+    .navbtn {
+      padding: .45rem .85rem;
+      border-radius: .5rem;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      color: #64748b;
+      transition: all .15s ease;
+    }
+
+    .navbtn:hover {
+      color: #0f172a;
+      background: #f1f5f9;
+    }
+
+    .navbtn.is-active {
+      color: #0f172a;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .08), 0 1px 2px rgba(0, 0, 0, .04);
+      border: 1px solid #e2e8f0;
+    }
+
+    .ghost-btn {
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      border-radius: .5rem;
+      padding: .35rem .75rem;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: Inter, system-ui, sans-serif;
+      letter-spacing: 0;
+      text-transform: none;
+      color: #475569;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+      transition: all .15s ease;
+    }
+
+    .ghost-btn:hover {
+      border-color: #cbd5e1;
+      color: #0f172a;
+      background: #f8fafc;
+    }
+
+    .field {
+      appearance: none;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+      border-radius: .5rem;
+      padding: .45rem 2.1rem .45rem .75rem;
+      font-size: 12px;
+      font-family: Inter, system-ui, sans-serif;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .field:focus {
+      outline: none;
+      border-color: #0f172a;
+      box-shadow: 0 0 0 2px rgba(15, 23, 42, .08);
+    }
+
+    .field option {
+      background: #ffffff;
+      color: #0f172a;
+    }
+
+    /* Accordion */
+    .acc-item {
+      transition: border-color .15s ease, box-shadow .15s ease;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.03);
+    }
+
+    .acc-item:hover {
+      border-color: #cbd5e1;
+    }
+
+    .acc-item.open {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    }
+
+    .acc-head {
+      background: transparent;
+      transition: background .15s ease;
+    }
+
+    .acc-head:hover {
+      background: #f8fafc;
+    }
+
+    .acc-body {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: .4;
+      transition: grid-template-rows .2s ease, opacity .2s ease;
+    }
+
+    .acc-item.open .acc-body {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+
+    .chev {
+      transition: transform .2s ease;
+    }
+
+    .acc-item.open .chev {
+      transform: rotate(180deg);
+    }
+
+    .app-glyph {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Permission rows */
+    .perm-row {
+      transition: border-color .15s ease, background .15s ease;
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+    }
+
+    .perm-row:hover {
+      border-color: #e2e8f0;
+      background: #f1f5f9;
+    }
+
+    .perm-row.is-on {
+      border-color: #a7f3d0;
+      background: #f0fdf4;
+      box-shadow: inset 2px 0 0 #059669;
+    }
+
+    .busy {
+      pointer-events: none;
+      opacity: .45;
+    }
+
+    /* Trust score rows */
+    .score-row {
+      transition: border-color .15s ease, background .15s ease;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+
+    .score-row.is-revoked {
+      border-color: #fecdd3;
+      background: #fff1f2;
+    }
+
+    .score-delta {
+      opacity: 0;
+      transform: translateY(-3px);
+      transition: all .2s ease;
+    }
+
+    .score-delta.show {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* Tags / Badges — Crisp Light Theme */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      border-radius: .375rem;
+      border: 1px solid;
+      padding: .2rem .55rem;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      white-space: nowrap;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    .chip-ok {
+      color: #047857;
+      border-color: #a7f3d0;
+      background: #ecfdf5;
+    }
+
+    .chip-bad {
+      color: #be123c;
+      border-color: #fecdd3;
+      background: #fff1f2;
+    }
+
+    .chip-warn {
+      color: #b45309;
+      border-color: #fde68a;
+      background: #fffbeb;
+    }
+
+    .chip-mute {
+      color: #475569;
+      border-color: #e2e8f0;
+      background: #f1f5f9;
+    }
+
+    /* Toasts — Clean elevated card */
+    .toast {
+      display: flex;
+      gap: .75rem;
+      align-items: flex-start;
+      border-radius: .75rem;
+      border: 1px solid #e2e8f0;
+      padding: .85rem 1rem;
+      width: 100%;
+      background: #ffffff;
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+      opacity: 0;
+      transform: translate3d(0, -8px, 0) scale(.99);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .toast.is-in {
+      opacity: 1;
+      transform: none;
+    }
+
+    .toast.ok {
+      border-color: #a7f3d0;
+    }
+
+    .toast.err {
+      border-color: #fecdd3;
+    }
+
+    .toast.info {
+      border-color: #cbd5e1;
+    }
+
+    .toast-ico {
+      display: grid;
+      place-items: center;
+      height: 24px;
+      width: 24px;
+      border-radius: .4rem;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .toast.ok .toast-ico {
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+
+    .toast.err .toast-ico {
+      background: #fff1f2;
+      color: #be123c;
+      border: 1px solid #fecdd3;
+    }
+
+    .toast.info .toast-ico {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* Modals */
+    .modal-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      opacity: 0;
+      transform: translateY(8px) scale(.99);
+      transition: opacity .2s cubic-bezier(.2, .8, .2, 1), transform .2s cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .modal-card.is-in {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* Severity theming */
+    .sev-card {
+      border: 1px solid rgb(var(--sev) / .25);
+    }
+
+    .sev-head {
+      background: rgb(var(--sev) / .05);
+      border-bottom: 1px solid rgb(var(--sev) / .15);
+    }
+
+    .sev-text {
+      color: rgb(var(--sev));
+    }
+
+    .sev-soft {
+      background: rgb(var(--sev) / .08);
+      border: 1px solid rgb(var(--sev) / .20);
+      color: rgb(var(--sev));
+    }
+
+    .sev-reason {
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      border-radius: .5rem;
+    }
+
+    .sev-bar {
+      background: rgb(var(--sev));
+    }
+
+    .sev-glow {
+      background: rgb(var(--sev));
+    }
+
+    .chip-sev {
+      color: rgb(var(--sev));
+      border-color: rgb(var(--sev) / .25);
+      background: rgb(var(--sev) / .08);
+    }
+
+    .allow-btn {
+      border-radius: .625rem;
+      border: 1px solid #059669;
+      background: #059669;
+      color: #ffffff;
+      padding: .85rem;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      transition: all .15s ease;
+    }
+
+    .allow-btn:hover:not(:disabled) {
+      background: #047857;
+      border-color: #047857;
+      box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.1);
+    }
+
+    .allow-btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .allow-btn:focus-visible,
+    .sev-btn:focus-visible,
+    .navbtn:focus-visible,
+    .ghost-btn:focus-visible {
+      outline: 2px solid #0f172a;
+      outline-offset: 2px;
+    }
+
+    #interceptCard:focus,
+    #auditCard:focus {
+      outline: none;
+    }
+
+    .sev-btn {
+      border-radius: .625rem;
+      border: 1px solid rgb(var(--sev));
+      background: rgb(var(--sev));
+      color: #ffffff;
+      padding: .85rem;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      transition: all .15s ease;
+    }
+
+    .sev-btn:hover:not(:disabled) {
+      filter: brightness(0.92);
+      box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.1);
+    }
+
+    .sev-btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    /* Logs table */
+    .log-table tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background .12s ease;
+    }
+
+    .log-table tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .log-table tbody tr:nth-child(even) {
+      background: #fdfdfe;
+    }
+
+    .log-table tbody tr:nth-child(even):hover {
+      background: #f8fafc;
+    }
+
+    /* Master Category Accordion */
+    details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details summary {
+      list-style: none;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen font-sans text-slate-900 antialiased bg-slate-50">
+
+  <div class="aurora animate-drift" aria-hidden="true"></div>
+
+  <!-- ============================ TOP COMMAND BAR ============================ -->
+  <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
+    <div class="mx-auto flex max-w-[1800px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-5">
+
+      <div class="flex items-center gap-3">
+        <div class="relative grid h-9 w-9 place-items-center rounded-lg border border-slate-800 bg-slate-900 shadow-sm">
+          <span class="font-mono text-sm font-semibold text-white">E</span>
+          <span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+        </div>
+        <div class="leading-tight">
+          <h1 class="font-sans text-[14px] font-semibold tracking-tight text-slate-900">E.D.I.T.H.</h1>
+          <p class="text-[11px] font-medium text-slate-500">Zero-Trust Security Fabric</p>
+        </div>
+      </div>
+
+      <nav class="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-100/80 p-1"
+        aria-label="Primary">
+        <button id="navDashboard" type="button" class="navbtn is-active" aria-selected="true">Dashboard</button>
+        <button id="navLogs" type="button" class="navbtn" aria-selected="false">Audit Logs</button>
+      </nav>
+
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+
+        <label
+          class="flex cursor-pointer select-none items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm transition-colors hover:bg-slate-50 hover:border-slate-300">
+          <span class="hidden text-[11px] font-medium text-slate-500 sm:inline">Audio</span>
+          <span class="relative inline-flex items-center">
+            <input id="audioToggle" type="checkbox" class="peer sr-only" />
+            <span
+              class="relative h-[20px] w-9 rounded-full border border-slate-300 bg-slate-200 transition-all duration-200
+                         after:absolute after:left-[2px] after:top-[2px] after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:shadow-sm
+                         after:content-[''] after:transition-transform after:duration-200
+                         peer-checked:border-emerald-600 peer-checked:bg-emerald-600
+                         peer-checked:after:translate-x-[16px]
+                         peer-focus-visible:ring-2 peer-focus-visible:ring-slate-400 peer-focus-visible:ring-offset-2"></span>
+          </span>
+          <span id="audioState" class="w-6 text-[11px] font-medium text-slate-500">OFF</span>
+        </label>
+
+        <button id="auditBtn" type="button" class="group flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm
+                       transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900
+                       disabled:cursor-not-allowed disabled:opacity-40">
+          <span id="auditBtnIcon" class="text-[11px] leading-none text-slate-500">◆</span>
+          <span id="auditBtnLabel" class="text-[12px] font-medium">Run Checkup</span>
+        </button>
+
+        <button id="notifBtn" type="button" aria-label="Open notification hub"
+          class="relative grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white
+                       text-slate-600 shadow-sm transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7"
+            stroke="currentColor" class="h-[16px] w-[16px]">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+          </svg>
+          <span id="notifBadge" class="absolute -right-1 -top-1 hidden h-4 min-w-[16px] items-center justify-center rounded-full
+                       bg-rose-600 px-1 text-[9px] font-semibold text-white shadow-sm">0</span>
+        </button>
+
+        <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
+          <span id="linkDot" class="h-2 w-2 rounded-full bg-slate-400"></span>
+          <span id="linkText" class="text-[11px] font-medium text-slate-600">Linking</span>
+        </div>
+
+        <span id="clock" class="hidden font-mono text-[11px] text-slate-500 xl:inline"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================ -->
+  <!-- ==================== TAB 1 · DASHBOARD ===================== -->
+  <!-- ============================================================ -->
+  <div id="tabDashboard" class="relative z-10">
+    <main class="mx-auto max-w-[1800px] px-4 py-5 sm:px-5">
+
+      <!-- KPI STRIP -->
+      <section class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="glass rounded-xl px-4 py-4">
+          <div class="flex items-center gap-2">
+            <span class="eyebrow">Monitored Apps</span>
+            <svg class="ml-auto h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.6">
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+          </div>
+          <p id="kpiApps" class="mt-3 font-mono text-2xl font-bold tabular-nums text-slate-900">—</p>
+          <p class="mt-0.5 text-[11px] font-medium text-slate-500">under policy</p>
+        </div>
+
+        <div class="glass rounded-xl px-4 py-4">
+          <div class="flex items-center gap-2">
+            <span class="eyebrow">Permissions Granted</span>
+            <svg class="ml-auto h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.6">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 7a4 4 0 1 0-3.6 3.98L4 18.4V21h3v-2h2v-2h2l1.02-1.02A4 4 0 1 0 15 7Z" />
+            </svg>
+          </div>
+          <p id="kpiGranted" class="mt-3 font-mono text-2xl font-bold tabular-nums text-slate-900">—<span
+              class="text-base font-normal text-slate-400">/40</span></p>
+          <p class="mt-0.5 text-[11px] font-medium text-slate-500">live consent</p>
+        </div>
+
+        <div class="glass rounded-xl px-4 py-4">
+          <div class="flex items-center gap-2">
+            <span class="eyebrow">Threats Blocked</span>
+            <svg class="ml-auto h-4 w-4 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.6">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 3 4.5 6v6c0 4.5 3.2 7.9 7.5 9 4.3-1.1 7.5-4.5 7.5-9V6L12 3Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="m9.5 12 1.8 1.8 3.4-3.6" />
+            </svg>
+          </div>
+          <p id="kpiBlocked" class="mt-3 font-mono text-2xl font-bold tabular-nums text-slate-900">—</p>
+          <p class="mt-0.5 text-[11px] font-medium text-slate-500">last 50 events</p>
+        </div>
+
+        <div class="glass rounded-xl px-4 py-4">
+          <div class="flex items-center gap-2">
+            <span class="eyebrow">Mean Trust</span>
+            <svg class="ml-auto h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 17a9 9 0 0 1 18 0" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="m12 17 4.2-4.6" />
+            </svg>
+          </div>
+          <p id="kpiTrust" class="mt-3 font-mono text-2xl font-bold tabular-nums text-slate-900">—</p>
+          <p class="mt-0.5 text-[11px] font-medium text-slate-500">fleet average / 100</p>
+        </div>
+      </section>
+
+      <div class="grid grid-cols-1 gap-5 xl:grid-cols-12">
+
+        <!-- ==================== PERMISSION MATRIX ==================== -->
+        <section class="xl:col-span-7">
+          <div class="mb-3 flex flex-wrap items-end gap-3">
+            <div>
+              <h2 class="panel-title">Central Permission Matrix</h2>
+              <p class="mt-0.5 text-[11px] text-slate-500">Live policy · changes propagate instantly</p>
+            </div>
+            <div class="ml-auto flex items-center gap-2">
+              <span id="matrixSummary" class="chip chip-mute">—</span>
+              <button id="expandBtn" type="button" class="ghost-btn">Collapse all</button>
+            </div>
+          </div>
+
+          <div id="matrix" class="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
+            <div class="glass rounded-xl p-4 text-[12px] text-slate-500 md:col-span-2">Syncing policy state…</div>
+          </div>
+
+          <div class="mt-3 flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-emerald-500 animate-pulseglow"></span>
+            <p class="min-w-0 truncate text-[11px] text-slate-500">
+              Last action · <span id="lastAction" class="text-slate-800 font-medium">no changes this session</span>
+            </p>
+          </div>
+        </section>
+
+        <!-- ==================== TRUST + GRAPH ==================== -->
+        <section class="flex flex-col gap-5 xl:col-span-5">
+
+          <div class="glass rounded-xl p-4">
+            <div class="mb-3 flex items-center gap-2">
+              <h2 class="panel-title">Trust Scores</h2>
+              <span id="revokedCount" class="chip chip-mute ml-auto">0 revoked</span>
+            </div>
+            <div id="scoreList" class="space-y-2.5">
+              <p class="text-[12px] text-slate-500">Awaiting telemetry…</p>
+            </div>
+            <p class="mt-3 border-t border-slate-100 pt-2.5 text-[11px] text-slate-400">
+              Block −7 · velocity burst −40 · revoked floor 50
+            </p>
+          </div>
+
+          <div class="glass rounded-xl p-4">
+            <div class="mb-3 flex items-center gap-2">
+              <h2 class="panel-title">Trust History</h2>
+              <span class="ml-auto flex items-center gap-1.5">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulseglow"></span>
+                <span class="text-[11px] font-medium text-slate-500">Live · 10s</span>
+              </span>
+            </div>
+            <div class="relative h-[250px]">
+              <canvas id="trustGraph" aria-label="Trust score history chart" role="img"></canvas>
+            </div>
+            <p class="mt-2 text-[11px] text-slate-400">
+              Every score movement is appended to the timeline
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ================ TAB 2 · SECURITY AUDIT LOGS =============== -->
+  <!-- ============================================================ -->
+  <div id="tabLogs" class="relative z-10 hidden">
+    <main class="mx-auto max-w-[1800px] px-4 py-5 sm:px-5">
+      <section class="glass rounded-xl p-4 sm:p-5">
+
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <div>
+            <h2 class="panel-title">Security Audit Logs</h2>
+            <p class="mt-0.5 text-[11px] text-slate-500">Every gateway decision, newest first</p>
+          </div>
+          <div class="flex-1"></div>
+
+          <label for="logFilter" class="text-[11px] font-medium text-slate-500">App</label>
+          <div class="relative">
+            <select id="logFilter" class="field">
+              <option value="all">All apps</option>
+              <option value="paytm">Paytm</option>
+              <option value="ypay">YPay</option>
+              <option value="weatherapp">WeatherApp</option>
+              <option value="calculator">Calculator</option>
+            </select>
+            <svg class="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
+
+          <label for="logResourceFilter" class="text-[11px] font-medium text-slate-500">Resource</label>
+          <div class="relative">
+            <select id="logResourceFilter" class="field">
+              <option value="all">All resources</option>
+              <option value="location">Location</option>
+              <option value="camera">Camera</option>
+              <option value="microphone">Microphone</option>
+              <option value="contacts">Contacts</option>
+              <option value="sms">SMS</option>
+              <option value="files">Files</option>
+              <option value="calendar">Calendar</option>
+              <option value="bluetooth">Bluetooth</option>
+              <option value="storage">Storage</option>
+              <option value="network">Network</option>
+            </select>
+            <svg class="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
+
+          <span id="logCount" class="chip chip-mute">0 records</span>
+        </div>
+
+        <div class="mt-4 max-h-[66vh] overflow-auto rounded-lg border border-slate-200 bg-white">
+          <table class="log-table w-full border-collapse text-left text-[12px]">
+            <thead class="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm border-b border-slate-200">
+              <tr class="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                <th class="px-3.5 py-3">Time</th>
+                <th class="px-3.5 py-3">App</th>
+                <th class="px-3.5 py-3">Resource</th>
+                <th class="px-3.5 py-3">Decision</th>
+                <th class="px-3.5 py-3">Auditor Reason</th>
+              </tr>
+            </thead>
+            <tbody id="logBody">
+              <tr>
+                <td colspan="5" class="py-12 text-center text-slate-500">No access events recorded.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="relative z-10 mx-auto max-w-[1800px] px-5 pb-6 pt-2 text-[11px] text-slate-500">
+    E.D.I.T.H. v4.1 · policy endpoint 127.0.0.1:8000 · graph 10s · interception poll 1s · Zero-Trust LLM justification +
+    audit
+  </footer>
+
+  <!-- ==================== REAL-TIME INTERCEPTION ==================== -->
+  <div id="interceptModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog"
+    aria-modal="true" aria-labelledby="interceptTitle">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+
+    <div id="interceptCard"
+      class="modal-card sev-card relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
+
+      <div id="interceptHeader" class="sev-head flex items-center gap-3 px-5 py-4">
+        <span id="interceptIcon"
+          class="sev-soft grid h-9 w-9 shrink-0 place-items-center rounded-lg text-base leading-none"></span>
+        <div class="min-w-0">
+          <p id="interceptTitle" class="sev-text text-[12px] font-semibold"></p>
+          <p id="interceptSubtitle" class="mt-0.5 text-[11px] text-slate-500">Human authorisation required</p>
+        </div>
+        <span id="interceptDot" class="sev-glow ml-auto h-2 w-2 shrink-0 rounded-full animate-pulseglow"></span>
+      </div>
+
+      <div class="px-5 pt-5">
+        <p id="interceptText" class="text-[15px] font-semibold leading-relaxed text-slate-900"></p>
+        <p id="interceptScope" class="mt-1 text-[11px] text-slate-500"></p>
+        <div id="interceptMeta" class="mt-4"></div>
+      </div>
+
+      <div class="px-5 pt-4">
+        <label for="durationSelect"
+          class="mb-1.5 block text-[11px] font-medium text-slate-600">Grant duration</label>
+        <div class="relative">
+          <select id="durationSelect" class="field w-full py-2.5">
+            <option value="0">Always on · permanent</option>
+            <option value="60">Allow for 60 seconds</option>
+            <option value="600">Allow for 10 minutes</option>
+            <option value="3600">Allow for 1 hour</option>
+          </select>
+          <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 px-5 py-5">
+        <button id="allowBtn" type="button" class="allow-btn">Yes · Allow</button>
+        <button id="denyBtn" type="button" class="sev-btn">No · Block</button>
+      </div>
+
+      <div class="border-t border-slate-100 bg-slate-50/80 px-5 py-2.5">
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] text-slate-500">Auto-decision in</span>
+          <span id="cdText" class="font-mono text-[11px] font-medium tabular-nums text-slate-700">30s</span>
+          <div class="ml-auto h-1.5 w-28 overflow-hidden rounded-full bg-slate-200">
+            <div id="cdFill" class="sev-bar h-full w-full rounded-full transition-[width] duration-200 ease-linear">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== NOTIFICATION HUB ==================== -->
+  <div id="notifPanel" class="fixed inset-0 z-50 hidden">
+    <div id="notifBackdrop" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+
+    <aside id="notifDrawer" class="absolute right-0 top-0 flex h-full w-full max-w-md translate-x-full flex-col border-l border-slate-200
+                  bg-white shadow-2xl transition-transform duration-300 ease-out">
+
+      <div class="flex items-center gap-3 border-b border-slate-200 bg-slate-50/70 px-5 py-4">
+        <span class="grid h-8 w-8 place-items-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+          </svg>
+        </span>
+        <div>
+          <p class="text-[13px] font-semibold text-slate-900">Notification Hub</p>
+          <p class="mt-0.5 text-[11px] text-slate-500"><span id="notifCount">0</span> alerts · admin denials</p>
+        </div>
+        <button id="notifClose" type="button" aria-label="Close notifications" class="ml-auto grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-400
+                       transition-colors duration-150 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700">✕</button>
+      </div>
+
+      <div id="notifList" class="flex-1 space-y-2.5 overflow-auto p-4">
+        <p class="text-[12px] text-slate-500">Loading alerts…</p>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ==================== AI SECURITY CHECKUP ==================== -->
+  <div id="auditModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true"
+    aria-labelledby="auditTitle">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+
+    <div id="auditCard" class="modal-card relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl border border-slate-200">
+      <div class="flex items-center gap-3 border-b border-slate-200 bg-slate-50/70 px-5 py-4">
+        <span class="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 3 4.5 6v6c0 4.5 3.2 7.9 7.5 9 4.3-1.1 7.5-4.5 7.5-9V6L12 3Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="m9.5 12 1.8 1.8 3.4-3.6" />
+          </svg>
+        </span>
+        <div>
+          <p id="auditTitle" class="text-[13px] font-semibold text-slate-900">AI Security Checkup</p>
+          <p class="mt-0.5 text-[11px] text-slate-500">Automated permission audit</p>
+        </div>
+        <button id="auditClose" type="button" aria-label="Close audit" class="ml-auto grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-400
+                       transition-colors duration-150 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700">✕</button>
+      </div>
+      <div id="auditBody" class="p-5"></div>
+    </div>
+  </div>
+
+  <div id="toastRoot" aria-live="polite"
+    class="fixed right-4 top-[78px] z-[70] flex w-[min(360px,calc(100vw-2rem))] flex-col gap-2"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const API = "http://127.0.0.1:8000";
+      const POLL_MS = 2000;
+      const GRAPH_MS = 10000;
+      const PERM_MS = 8000;
+      const NOTIF_MS = 2500;
+      const INTERCEPT_POLL_MS = 1000;
+      const TRUST_FLOOR = 50;
+
+      const APPS = [
+        { name: "Paytm", glyph: "₹", tag: "Payments" },
+        { name: "YPay", glyph: "¥", tag: "Payments" },
+        { name: "WeatherApp", glyph: "◔", tag: "Utility" },
+        { name: "Calculator", glyph: "∑", tag: "System Tool" },
+      ];
+
+      const RESOURCES = [
+        { label: "Location", key: "location", glyph: "⌖" },
+        { label: "Contacts", key: "contacts", glyph: "◎" },
+        { label: "Microphone", key: "microphone", glyph: "◍" },
+        { label: "SMS", key: "sms", glyph: "✉" },
+        { label: "Camera", key: "camera", glyph: "◫" },
+        { label: "Files", key: "files", glyph: "▤" },
+        { label: "Calendar", key: "calendar", glyph: "▦" },
+        { label: "Bluetooth", key: "bluetooth", glyph: "⌁" },
+        { label: "Storage", key: "storage", glyph: "▥" },
+        { label: "Network", key: "network", glyph: "⇄" },
+      ];
+
+      const RESOURCE_META = {
+        location: "Precise GPS coordinates",
+        contacts: "Full contact book",
+        microphone: "Live audio capture",
+        sms: "Read & send messages",
+        camera: "Live camera feed",
+        files: "Personal documents",
+        calendar: "Calendar events",
+        bluetooth: "Nearby device discovery",
+        storage: "On-device file storage",
+        network: "Internet connectivity",
+      };
+
+      const RISK = {
+        location: "critical", camera: "critical", microphone: "critical",
+        contacts: "elevated", sms: "elevated",
+        files: "standard", calendar: "standard", bluetooth: "standard",
+        storage: "standard", network: "standard",
+      };
+
+      const SEVERITY = {
+        critical: { rgb: "225 29 72", icon: "⚠", title: "Critical Resource Request", tier: "Critical · sensor access" },
+        elevated: { rgb: "217 119 6", icon: "▲", title: "Elevated Resource Request", tier: "Elevated · personal data" },
+        standard: { rgb: "234 88 12", icon: "◆", title: "Standard Resource Request", tier: "Standard · low sensitivity" },
+      };
+
+      const toggleRefs = {};
+      const $ = (id) => document.getElementById(id);
+
+      /* ---------------- utilities ---------------- */
+      function esc(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      }
+
+      function fmtTime(iso) {
+        const d = new Date(iso);
+        return isNaN(d.getTime()) ? String(iso || "—") : d.toLocaleTimeString([], { hour12: false });
+      }
+
+      function fmtDateTime(iso) {
+        const d = new Date(iso);
+        return isNaN(d.getTime()) ? String(iso || "—") : d.toLocaleString();
+      }
+
+      async function postJSON(path, body) {
+        const res = await fetch(API + path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      }
+
+      async function getJSON(path) {
+        const res = await fetch(API + path);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      }
+
+      /* ---------------- toasts (max 3, no infinite stacking) ---------------- */
+      const toastRoot = $("toastRoot");
+
+      function dismissToast(el) {
+        if (!el || el.dataset.closing) return;
+        el.dataset.closing = "1";
+        el.classList.remove("is-in");
+        window.setTimeout(() => el.remove(), 250);
+      }
+
+      function toast(tone, title, detail) {
+        const icons = { ok: "✓", err: "✕", info: "◈" };
+        const el = document.createElement("div");
+        el.className = "toast " + tone;
+        el.innerHTML =
+          '<span class="toast-ico">' + (icons[tone] || "◈") + "</span>" +
+          '<div class="min-w-0">' +
+          '<p class="text-[13px] font-semibold text-slate-900">' + esc(title) + "</p>" +
+          (detail ? '<p class="mt-0.5 break-words text-[12px] leading-relaxed text-slate-500">' + esc(detail) + "</p>" : "") +
+          "</div>" +
+          '<button type="button" class="ml-auto shrink-0 text-slate-400 hover:text-slate-600 transition-colors" aria-label="Dismiss">✕</button>';
+
+        el.querySelector("button").addEventListener("click", () => dismissToast(el));
+        toastRoot.appendChild(el);
+        requestAnimationFrame(() => el.classList.add("is-in"));
+
+        while (toastRoot.children.length > 3) {
+          const oldest = toastRoot.firstElementChild;
+          if (!oldest) break;
+          oldest.remove();
+        }
+        window.setTimeout(() => dismissToast(el), 3800);
+      }
+
+      /* ---------------- accordion matrix ---------------- */
+      const matrixRoot = $("matrix");
+
+      function rowHTML(appName, resource) {
+        return (
+          '<div class="perm-row flex items-center gap-2.5 rounded-lg border border-slate-200/60 bg-slate-50/60 px-3 py-2.5" data-row="' + resource.key + '">' +
+          '<span class="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-slate-200 bg-white font-mono text-[11px] text-slate-600 shadow-sm">' + resource.glyph + "</span>" +
+          '<span class="min-w-0 flex-1 truncate text-[12px] font-medium text-slate-800">' + resource.label + "</span>" +
+          '<label class="relative inline-flex shrink-0 cursor-pointer items-center" aria-label="Toggle ' + resource.label + ' for ' + appName + '">' +
+          '<input type="checkbox" class="peer sr-only" data-app="' + appName + '" data-res="' + resource.key + '" />' +
+          '<span class="relative h-[20px] w-9 rounded-full border border-slate-300 bg-slate-200 transition-all duration-200 ' +
+          "after:absolute after:left-[2px] after:top-[2px] after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:shadow-sm " +
+          "after:content-[''] after:transition-transform after:duration-200 " +
+          "peer-checked:border-emerald-600 peer-checked:bg-emerald-600 " +
+          "peer-checked:after:translate-x-[16px] " +
+          'peer-focus-visible:ring-2 peer-focus-visible:ring-slate-400"></span>' +
+          "</label>" +
+          '<span data-state="' + resource.key + '" class="w-7 shrink-0 text-right font-mono text-[10px] font-medium text-slate-400">OFF</span>' +
+          "</div>"
+        );
+      }
+
+      function createAppAccordion(app, defaultOpen) {
+        toggleRefs[app.name] = {};
+
+        const item = document.createElement("article");
+        item.className = "acc-item rounded-xl overflow-hidden";
+        item.innerHTML =
+          '<button type="button" class="acc-head flex w-full items-center gap-3 px-4 py-3.5 text-left" aria-expanded="' + (defaultOpen ? "true" : "false") + '">' +
+          '<span class="app-glyph grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-100 text-[13px] text-slate-700 font-semibold">' + app.glyph + "</span>" +
+          '<span class="min-w-0 flex-1">' +
+          '<span class="block truncate text-[13px] font-semibold text-slate-900">' + app.name + "</span>" +
+          '<span class="mt-0.5 block text-[11px] font-medium text-slate-500">' + app.tag + "</span>" +
+          "</span>" +
+          '<span data-appcount="' + app.name + '" class="chip chip-mute shrink-0">—</span>' +
+          '<svg class="chev h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>' +
+          "</button>" +
+          '<div class="acc-body"><div class="overflow-hidden">' +
+          '<div class="space-y-1.5 border-t border-slate-100 px-3.5 pb-3.5 pt-2.5">' +
+          RESOURCES.map((r) => rowHTML(app.name, r)).join("") +
+          "</div>" +
+          "</div></div>";
+
+        const head = item.querySelector(".acc-head");
+        head.addEventListener("click", () => {
+          const open = !item.classList.contains("open");
+          item.classList.toggle("open", open);
+          head.setAttribute("aria-expanded", String(open));
+          syncExpandLabel();
+        });
+
+        RESOURCES.forEach((r) => {
+          const checkbox = item.querySelector('input[data-res="' + r.key + '"]');
+          const stateLabel = item.querySelector('span[data-state="' + r.key + '"]');
+          const row = item.querySelector('div[data-row="' + r.key + '"]');
+          toggleRefs[app.name][r.key] = { checkbox, stateLabel, row };
+
+          checkbox.addEventListener("change", () => {
+            handleToggle(app.name, r.key, checkbox.checked);
+          });
+        });
+
+        if (defaultOpen) {
+          item.classList.add("open");
+        }
+
+        return item;
+      }
+
+      function buildMatrix() {
+        matrixRoot.innerHTML =
+          '<!-- Master Accordion: The UPI Bracket -->' +
+          '<details id="upiBracket" class="group/upi col-span-1 md:col-span-2 rounded-xl border border-slate-200 bg-white shadow-sm transition-all" open>' +
+          '<summary class="flex cursor-pointer select-none items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors list-none rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">' +
+          '<div class="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold text-[11px] font-mono shadow-sm">UPI</div>' +
+          '<div class="min-w-0 flex-1">' +
+          '<div class="flex items-center gap-2">' +
+          '<span class="text-[13px] font-semibold text-slate-900">UPI Apps</span>' +
+          '<span class="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-200">Category · 2 Apps</span>' +
+          '</div>' +
+          '<p class="text-[11px] text-slate-500 mt-0.5">High-frequency payment clients (Paytm &amp; YPay)</p>' +
+          '</div>' +
+          '<span id="upiCategoryCount" class="chip chip-mute shrink-0">—</span>' +
+          '<svg class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open/upi:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/>' +
+          '</svg>' +
+          '</summary>' +
+          '<div class="border-t border-slate-100 bg-slate-50/60 p-3 sm:p-4">' +
+          '<div class="space-y-3 pl-3 sm:pl-4 border-l-2 border-emerald-500/40 ml-1">' +
+          '<div class="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">' +
+          '<span>↳</span><span>Payment Gateway Clients</span>' +
+          '</div>' +
+          '<div id="upiChildContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>' +
+          '</div>' +
+          '</div>' +
+          '</details>' +
+          '<div id="standAloneApps" class="contents"></div>';
+
+        const upiContainer = $("upiChildContainer");
+        const standAloneContainer = $("standAloneApps");
+
+        APPS.forEach((app) => {
+          const isUpi = app.name === "Paytm" || app.name === "YPay";
+          const defaultOpen = app.name === "Paytm";
+          const item = createAppAccordion(app, defaultOpen);
+
+          if (isUpi && upiContainer) {
+            upiContainer.appendChild(item);
+          } else if (standAloneContainer) {
+            standAloneContainer.appendChild(item);
+          }
+        });
+
+        const upi = $("upiBracket");
+        if (upi) {
+          upi.addEventListener("toggle", syncExpandLabel);
+        }
+
+        syncExpandLabel();
+      }
+
+      function syncExpandLabel() {
+        const items = matrixRoot.querySelectorAll(".acc-item");
+        const allOpen = items.length > 0 && Array.from(items).every((i) => i.classList.contains("open"));
+        const upi = $("upiBracket");
+        const isUpiOpen = !upi || upi.open;
+        $("expandBtn").textContent = (allOpen && isUpiOpen) ? "Collapse all" : "Expand all";
+      }
+
+      $("expandBtn").addEventListener("click", () => {
+        const items = Array.from(matrixRoot.querySelectorAll(".acc-item"));
+        const upi = $("upiBracket");
+        const isUpiOpen = !upi || upi.open;
+        const allOpen = items.length > 0 && items.every((i) => i.classList.contains("open")) && isUpiOpen;
+
+        items.forEach((item) => {
+          item.classList.toggle("open", !allOpen);
+          const head = item.querySelector(".acc-head");
+          if (head) head.setAttribute("aria-expanded", String(!allOpen));
+        });
+        if (upi) upi.open = !allOpen;
+        syncExpandLabel();
+      });
+
+      /* ---------------- toggle state ---------------- */
+      function setToggleVisual(appName, resource, state) {
+        const ref = toggleRefs[appName] && toggleRefs[appName][resource];
+        if (!ref) return;
+
+        ref.checkbox.checked = state;
+        ref.stateLabel.textContent = state ? "ON" : "OFF";
+        ref.stateLabel.className =
+          "w-7 shrink-0 text-right font-mono text-[10px] font-semibold " +
+          (state ? "text-emerald-700" : "text-slate-400");
+        ref.row.classList.toggle("is-on", state);
+      }
+
+      let pendingToggles = 0;
+      const lastActionEl = $("lastAction");
+
+      function countGranted() {
+        let granted = 0;
+        APPS.forEach((app) => {
+          Object.values(toggleRefs[app.name] || {}).forEach((ref) => {
+            if (ref.checkbox.checked) granted++;
+          });
+        });
+        return granted;
+      }
+
+      function updateSummaryCounts() {
+        let granted = 0;
+        let total = 0;
+
+        APPS.forEach((app) => {
+          let enabled = 0;
+          Object.values(toggleRefs[app.name] || {}).forEach((ref) => {
+            if (ref.checkbox.checked) enabled++;
+          });
+          granted += enabled;
+          total += RESOURCES.length;
+
+          const el = document.querySelector('[data-appcount="' + app.name + '"]');
+          if (el) {
+            el.textContent = enabled + "/" + RESOURCES.length;
+            el.className = enabled === RESOURCES.length
+              ? "chip chip-ok shrink-0"
+              : (enabled === 0 ? "chip chip-bad shrink-0" : "chip chip-mute shrink-0");
+          }
+        });
+
+        // UPI Category summary
+        let upiGranted = 0;
+        let upiTotal = 0;
+        ["Paytm", "YPay"].forEach((upiAppName) => {
+          Object.values(toggleRefs[upiAppName] || {}).forEach((ref) => {
+            if (ref.checkbox.checked) upiGranted++;
+            upiTotal++;
+          });
+        });
+        const upiEl = $("upiCategoryCount");
+        if (upiEl) {
+          upiEl.textContent = upiGranted + "/" + upiTotal + " allowed";
+          upiEl.className = upiGranted === upiTotal ? "chip chip-ok shrink-0" : (upiGranted === 0 ? "chip chip-bad shrink-0" : "chip chip-mute shrink-0");
+        }
+
+        const denied = total - granted;
+        const summary = $("matrixSummary");
+        summary.textContent = denied + (denied === 1 ? " permission denied" : " permissions denied");
+        summary.className = denied ? "chip chip-bad" : "chip chip-ok";
+        $("kpiGranted").innerHTML = granted + '<span class="text-base font-normal text-slate-400">/' + total + "</span>";
+      }
+
+      async function handleToggle(appName, resource, state) {
+        const ref = toggleRefs[appName][resource];
+        const label = ref.checkbox.closest("label");
+
+        setToggleVisual(appName, resource, state);
+        updateSummaryCounts();
+        if (label) label.classList.add("busy");
+        pendingToggles++;
+
+        try {
+          await postJSON("/toggle_permission", { app_name: appName, resource: resource, state: state });
+          setLink(true);
+          lastActionEl.textContent = appName + " · " + resource + " → " + (state ? "ON" : "OFF") + " @ " + new Date().toLocaleTimeString();
+          lastActionEl.className = state ? "text-emerald-700 font-medium" : "text-rose-700 font-medium";
+        } catch (err) {
+          setToggleVisual(appName, resource, !state);
+          updateSummaryCounts();
+          setLink(false);
+          lastActionEl.textContent = appName + " · " + resource + " → rejected by policy engine";
+          lastActionEl.className = "text-rose-700 font-medium";
+          toast("err", "Policy write rejected", appName + " / " + resource + " could not be updated.");
+        } finally {
+          pendingToggles = Math.max(0, pendingToggles - 1);
+          if (label) label.classList.remove("busy");
+        }
+      }
+
+      async function loadPermissions(silent) {
+        if (pendingToggles > 0) return;
+
+        try {
+          const perms = await getJSON("/get_permissions");
+          Object.keys(perms).forEach((appName) => {
+            if (!toggleRefs[appName]) return;
+            Object.keys(perms[appName]).forEach((resource) => {
+              if (toggleRefs[appName][resource]) {
+                setToggleVisual(appName, resource, perms[appName][resource]);
+              }
+            });
+          });
+          updateSummaryCounts();
+          setLink(true);
+        } catch (err) {
+          if (!silent) {
+            setLink(false);
+            $("matrixSummary").textContent = "policy engine unreachable";
+          }
+        }
+      }
+
+      /* ---------------- trust scores ---------------- */
+      const scoreList = $("scoreList");
+      const revokedCountEl = $("revokedCount");
+      const scoreRows = new Map();
+      let lastScores = [];
+
+      function ensureScoreRow(name) {
+        if (scoreRows.has(name)) return scoreRows.get(name);
+
+        const row = document.createElement("div");
+        row.className = "score-row rounded-lg border border-slate-200 bg-slate-50/70 p-3 shadow-sm";
+        row.innerHTML =
+          '<div class="flex items-center gap-2">' +
+          '<span class="min-w-0 truncate text-[12px] font-semibold text-slate-900">' + esc(name) + "</span>" +
+          '<span class="chip chip-ok shrink-0"></span>' +
+          '<span class="score-delta ml-auto shrink-0 font-mono text-[11px] font-medium"></span>' +
+          '<span class="score-val shrink-0 font-mono text-[14px] font-bold tabular-nums text-emerald-700">100</span>' +
+          "</div>" +
+          '<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">' +
+          '<div class="score-bar h-full rounded-full bg-emerald-600 transition-all duration-500 ease-out" style="width:0%"></div>' +
+          "</div>";
+
+        const ref = {
+          row: row,
+          chip: row.querySelector(".chip"),
+          val: row.querySelector(".score-val"),
+          fill: row.querySelector(".score-bar"),
+          delta: row.querySelector(".score-delta"),
+          revoked: null,
+          score: null,
+          timer: null,
+        };
+
+        scoreRows.set(name, ref);
+        scoreList.appendChild(row);
+        return ref;
+      }
+
+      function renderScores(scores) {
+        lastScores = Array.isArray(scores) ? scores : [];
+
+        if (!lastScores.length) {
+          scoreList.innerHTML = '<p class="text-[12px] text-slate-500">No applications registered.</p>';
+          revokedCountEl.textContent = "0 revoked";
+          revokedCountEl.className = "chip chip-mute ml-auto";
+          $("kpiApps").textContent = "0";
+          $("kpiTrust").textContent = "—";
+          return;
+        }
+
+        if (scoreList.querySelector("p")) scoreList.innerHTML = "";
+        let revoked = 0;
+
+        lastScores.forEach((s) => {
+          const score = Math.max(0, Math.min(100, Number(s.trust_score) || 0));
+          const isRevoked = score <= TRUST_FLOOR;
+          if (isRevoked) revoked++;
+
+          const ref = ensureScoreRow(s.app_name);
+          if (ref.row.parentNode !== scoreList) scoreList.appendChild(ref.row);
+
+          if (ref.revoked !== isRevoked) {
+            ref.revoked = isRevoked;
+            ref.row.classList.toggle("is-revoked", isRevoked);
+            ref.chip.textContent = isRevoked ? "Revoked" : "Secure";
+            ref.chip.className = "chip shrink-0 " + (isRevoked ? "chip-bad" : "chip-ok");
+            ref.val.className = "score-val shrink-0 font-mono text-[14px] font-bold tabular-nums " + (isRevoked ? "text-rose-700" : "text-emerald-700");
+            ref.fill.className = "score-bar h-full rounded-full transition-all duration-500 ease-out " +
+              (isRevoked ? "bg-rose-600" : "bg-emerald-600");
+          }
+
+          if (ref.score !== null && ref.score !== score) {
+            const diff = score - ref.score;
+            ref.delta.textContent = (diff > 0 ? "+" : "") + diff;
+            ref.delta.className = "score-delta show ml-auto shrink-0 font-mono text-[11px] font-medium " + (diff > 0 ? "text-emerald-700" : "text-rose-700");
+            window.clearTimeout(ref.timer);
+            ref.timer = window.setTimeout(() => {
+              ref.delta.className = "score-delta ml-auto shrink-0 font-mono text-[11px]";
+            }, 2800);
+          }
+
+          ref.score = score;
+          ref.val.textContent = String(score);
+          ref.fill.style.width = score + "%";
+        });
+
+        revokedCountEl.textContent = revoked + " revoked";
+        revokedCountEl.className = revoked ? "chip chip-bad ml-auto" : "chip chip-mute ml-auto";
+
+        const mean = Math.round(lastScores.reduce((a, s) => a + (Number(s.trust_score) || 0), 0) / lastScores.length);
+        $("kpiApps").textContent = String(lastScores.length);
+        $("kpiTrust").textContent = String(mean);
+        $("kpiTrust").className = "mt-3 font-mono text-2xl font-bold tabular-nums " + (mean < TRUST_FLOOR ? "text-rose-700" : "text-slate-900");
+      }
+
+      /* ---------------- chart ---------------- */
+      const GRAPH_META = {
+        paytm: { label: "Paytm", color: "#0284c7" },
+        ypay: { label: "YPay", color: "#6366f1" },
+        weatherapp: { label: "WeatherApp", color: "#059669" },
+        calculator: { label: "Calculator", color: "#d97706" },
+      };
+
+      function hexToRgb(hex) {
+        const n = parseInt(hex.slice(1), 16);
+        return ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255);
+      }
+
+      function makeFill(color) {
+        return function (context) {
+          const chart = context.chart;
+          const area = chart.chartArea;
+          if (!area) return "rgba(0,0,0,0)";
+          const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+          g.addColorStop(0, "rgba(" + hexToRgb(color) + ",.12)");
+          g.addColorStop(1, "rgba(" + hexToRgb(color) + ",0)");
+          return g;
+        };
+      }
+
+      const chartPlugins = [
+        {
+          id: "trustFloor",
+          beforeDatasetsDraw(chart) {
+            const y = chart.scales.y;
+            const area = chart.chartArea;
+            if (!y || !area) return;
+            const py = y.getPixelForValue(TRUST_FLOOR);
+            const c = chart.ctx;
+            c.save();
+            c.setLineDash([4, 6]);
+            c.lineWidth = 1;
+            c.strokeStyle = "rgba(225, 29, 72, .35)";
+            c.beginPath();
+            c.moveTo(area.left, py);
+            c.lineTo(area.right, py);
+            c.stroke();
+            c.setLineDash([]);
+            c.fillStyle = "#e11d48";
+            c.font = '10px Inter, system-ui, sans-serif';
+            c.textAlign = "right";
+            c.fillText("TRUST FLOOR 50", area.right - 4, py - 5);
+            c.restore();
+          },
+        },
+      ];
+
+      let trustChart = null;
+      const graphCanvas = $("trustGraph");
+
+      function initChart() {
+        if (!graphCanvas || typeof window.Chart === "undefined") return;
+
+        trustChart = new Chart(graphCanvas, {
+          type: "line",
+          data: { labels: [], datasets: [] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: "easeOutQuart" },
+            interaction: { mode: "index", intersect: false },
+            layout: { padding: { top: 10, right: 4, left: 0, bottom: 0 } },
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  color: "#475569",
+                  font: { size: 11, family: "Inter, system-ui, sans-serif", weight: "500" },
+                  boxWidth: 8,
+                  boxHeight: 8,
+                  padding: 14,
+                  usePointStyle: true,
+                  pointStyle: "circle",
+                },
+              },
+              tooltip: {
+                backgroundColor: "#ffffff",
+                borderColor: "#e2e8f0",
+                borderWidth: 1,
+                titleColor: "#0f172a",
+                bodyColor: "#334155",
+                titleFont: { size: 12, family: "Inter, system-ui, sans-serif", weight: "600" },
+                bodyFont: { size: 11, family: "Inter, system-ui, sans-serif" },
+                padding: 10,
+                cornerRadius: 8,
+                displayColors: true,
+                boxWidth: 8,
+                boxHeight: 8,
+                usePointStyle: true,
+                boxPadding: 4,
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                border: { display: false },
+                ticks: {
+                  color: "#64748b",
+                  maxTicksLimit: 6,
+                  font: { size: 11, family: "Inter, system-ui, sans-serif" },
+                },
+              },
+              y: {
+                min: 0,
+                max: 100,
+                grid: { color: "#f1f5f9" },
+                border: { display: false },
+                ticks: {
+                  color: "#64748b",
+                  stepSize: 25,
+                  font: { size: 11, family: "Inter, system-ui, sans-serif" },
+                },
+              },
+            },
+          },
+          plugins: chartPlugins,
+        });
+      }
+
+      function updateTrustGraph(history) {
+        if (!trustChart) return;
+        const data = history || {};
+        const keys = Object.keys(GRAPH_META).filter((k) => Array.isArray(data[k]) && data[k].length);
+        if (!keys.length) return;
+
+        const maxLen = Math.max.apply(null, keys.map((k) => data[k].length));
+        trustChart.data.labels = Array.from({ length: maxLen }, (_, i) => (i === 0 ? "Start" : "T+" + i));
+        trustChart.data.datasets = keys.map((k) => {
+          const series = data[k];
+          const single = series.length === 1;
+          return {
+            label: GRAPH_META[k].label,
+            data: series,
+            borderColor: GRAPH_META[k].color,
+            backgroundColor: makeFill(GRAPH_META[k].color),
+            pointBackgroundColor: GRAPH_META[k].color,
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
+            pointRadius: single ? 4 : 0,
+            pointHoverRadius: 5,
+            pointHitRadius: 14,
+            borderWidth: 2,
+            tension: 0.38,
+            fill: true,
+          };
+        });
+        trustChart.update();
+      }
+
+      /* ---------------- logs ---------------- */
+      const logBody = $("logBody");
+      const logFilterEl = $("logFilter");
+      const logResourceFilterEl = $("logResourceFilter");
+      const logCountEl = $("logCount");
+
+      let allLogs = [];
+      let logFilter = "all";
+      let logResourceFilter = "all";
+      let logsSig = "";
+
+      function renderLogs(force) {
+        const rows = allLogs.filter((l) => {
+          const appOk = logFilter === "all" || String(l.app_name || "").toLowerCase() === logFilter;
+          const resOk = logResourceFilter === "all" || String(l.requested_resource || "").toLowerCase() === logResourceFilter;
+          return appOk && resOk;
+        });
+
+        const sig = logFilter + "|" + logResourceFilter + "|" + JSON.stringify(rows);
+        if (!force && sig === logsSig) return;
+        logsSig = sig;
+
+        logCountEl.textContent = rows.length + (rows.length === 1 ? " record" : " records");
+        $("kpiBlocked").textContent = String(allLogs.filter((l) => l.status === "Blocked").length);
+
+        if (!rows.length) {
+          logBody.innerHTML = '<tr><td colspan="5" class="py-12 text-center text-slate-400">No access events for this filter.</td></tr>';
+          return;
+        }
+
+        logBody.innerHTML = rows.map((l) => {
+          const allowed = l.status === "Allowed";
+          const reason = l.ai_reason || "—";
+          return (
+            '<tr>' +
+            '<td class="whitespace-nowrap px-3.5 py-3 font-mono text-[11px] text-slate-500">' + esc(fmtTime(l.timestamp)) + "</td>" +
+            '<td class="whitespace-nowrap px-3.5 py-3 font-semibold text-slate-900">' + esc(l.app_name) + "</td>" +
+            '<td class="whitespace-nowrap px-3.5 py-3"><span class="chip chip-mute">' + esc(l.requested_resource) + "</span></td>" +
+            '<td class="whitespace-nowrap px-3.5 py-3"><span class="chip ' + (allowed ? "chip-ok" : "chip-bad") + '">' + esc(l.status) + "</span></td>" +
+            '<td class="px-3.5 py-3 text-slate-600"><div class="max-w-[420px] truncate" title="' + esc(reason) + '">' + esc(reason) + "</div></td>" +
+            "</tr>"
+          );
+        }).join("");
+      }
+
+      logFilterEl.addEventListener("change", () => { logFilter = logFilterEl.value; renderLogs(true); });
+      logResourceFilterEl.addEventListener("change", () => { logResourceFilter = logResourceFilterEl.value; renderLogs(true); });
+
+      /* ---------------- polling ---------------- */
+      async function pollScores() {
+        if (document.hidden) return;
+        try {
+          renderScores(await getJSON("/get_scores"));
+          setLink(true);
+        } catch (err) { setLink(false); }
+      }
+
+      async function pollLogs() {
+        if (document.hidden) return;
+        try {
+          allLogs = await getJSON("/get_logs");
+          renderLogs(false);
+          setLink(true);
+        } catch (err) { setLink(false); }
+      }
+
+      async function pollTrustHistory() {
+        if (document.hidden) return;
+        try {
+          updateTrustGraph(await getJSON("/get_trust_history"));
+          setLink(true);
+        } catch (err) { setLink(false); }
+      }
+
+      /* ---------------- connection + clock ---------------- */
+      const linkDot = $("linkDot");
+      const linkText = $("linkText");
+
+      function setLink(online) {
+        if (online) {
+          linkDot.className = "h-2 w-2 rounded-full bg-emerald-500";
+          linkText.textContent = "Policy link active";
+          linkText.className = "text-[11px] font-medium text-emerald-700";
+        } else {
+          linkDot.className = "h-2 w-2 rounded-full bg-rose-500";
+          linkText.textContent = "Policy link down";
+          linkText.className = "text-[11px] font-medium text-rose-700";
+        }
+      }
+
+      function tickClock() {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
+        $("clock").textContent = new Date().toLocaleTimeString([], { hour12: false }) + " · " + tz.split("/").pop().replace(/_/g, " ");
+      }
+
+      /* ---------------- tabs ---------------- */
+      const tabDashboard = $("tabDashboard");
+      const tabLogs = $("tabLogs");
+      const navDashboard = $("navDashboard");
+      const navLogs = $("navLogs");
+
+      function switchTab(target) {
+        const showDashboard = target === "dashboard";
+        tabDashboard.classList.toggle("hidden", !showDashboard);
+        tabLogs.classList.toggle("hidden", showDashboard);
+
+        navDashboard.classList.toggle("is-active", showDashboard);
+        navLogs.classList.toggle("is-active", !showDashboard);
+        navDashboard.setAttribute("aria-selected", String(showDashboard));
+        navLogs.setAttribute("aria-selected", String(!showDashboard));
+
+        if (!showDashboard) renderLogs(true);
+        if (trustChart) requestAnimationFrame(() => trustChart.resize());
+      }
+
+      navDashboard.addEventListener("click", () => switchTab("dashboard"));
+      navLogs.addEventListener("click", () => switchTab("logs"));
+
+      /* ---------------- audio ---------------- */
+      const audioToggle = $("audioToggle");
+      const audioState = $("audioState");
+      let audioEnabled = false;
+      let audioCtx = null;
+
+      function ensureAudio() {
+        if (!audioEnabled) return null;
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return null;
+          if (!audioCtx) audioCtx = new Ctx();
+          if (audioCtx.state === "suspended") audioCtx.resume().catch(function () { });
+          return audioCtx;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function tone(freq, at, duration, type, volume) {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        try {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type || "sine";
+          osc.frequency.setValueAtTime(freq, at);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          gain.gain.setValueAtTime(0.0001, at);
+          gain.gain.exponentialRampToValueAtTime(volume || 0.16, at + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+          osc.start(at);
+          osc.stop(at + duration + 0.04);
+        } catch (err) { /* audio is decorative */ }
+      }
+
+      function playChime() {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        const t0 = ctx.currentTime;
+        for (let i = 0; i < 4; i++) {
+          tone(720 + i * 40, t0 + i * 0.85, 0.5, "sine", 0.15);
+        }
+      }
+
+      function playSiren() {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        let t = ctx.currentTime;
+        for (let i = 0; i < 6; i++) {
+          tone(1500, t, 0.13, "square", 0.09);
+          tone(980, t + 0.14, 0.13, "square", 0.09);
+          t += 0.3;
+        }
+      }
+
+      audioToggle.addEventListener("change", () => {
+        audioEnabled = audioToggle.checked;
+        audioState.textContent = audioEnabled ? "ON" : "OFF";
+        audioState.className = "w-6 text-[11px] font-medium " + (audioEnabled ? "text-emerald-700" : "text-slate-500");
+        if (audioEnabled) {
+          const ctx = ensureAudio();
+          if (ctx) tone(1180, ctx.currentTime, 0.12, "sine", 0.12);
+          toast("info", "Audio alerts armed", "Interceptions will sound a chime or siren.");
+        }
+      });
+
+      document.addEventListener("pointerdown", function () {
+        if (audioEnabled) ensureAudio();
+      }, { passive: true });
+
+      /* ---------------- interception ---------------- */
+      const modal = $("interceptModal");
+      const interceptCard = $("interceptCard");
+      const interceptIcon = $("interceptIcon");
+      const interceptTitle = $("interceptTitle");
+      const interceptDot = $("interceptDot");
+      const interceptText = $("interceptText");
+      const interceptScope = $("interceptScope");
+      const interceptMeta = $("interceptMeta");
+      const durationSelect = $("durationSelect");
+      const allowBtn = $("allowBtn");
+      const denyBtn = $("denyBtn");
+      const cdText = $("cdText");
+      const cdFill = $("cdFill");
+
+      let activeRequest = null;
+      let resolving = false;
+      let countdownTimer = null;
+      let hideTimer = null;
+      let autoExpired = false;
+
+      function startCountdown(seconds) {
+        window.clearInterval(countdownTimer);
+        const total = Math.max(1, Number(seconds) || 30);
+        const deadline = Date.now() + total * 1000;
+        autoExpired = false;
+
+        const tick = () => {
+          const left = Math.max(0, deadline - Date.now());
+          cdFill.style.width = Math.max(0, Math.min(100, (left / (total * 1000)) * 100)) + "%";
+          cdText.textContent = Math.ceil(left / 1000) + "s";
+          if (left <= 0) {
+            autoExpired = true;
+            window.clearInterval(countdownTimer);
+            countdownTimer = null;
+          }
+        };
+
+        tick();
+        countdownTimer = window.setInterval(tick, 200);
+      }
+
+      function showIntercept(req) {
+        activeRequest = req;
+        resolving = false;
+        autoExpired = false;
+        allowBtn.disabled = false;
+        denyBtn.disabled = false;
+        allowBtn.textContent = "Yes · Allow";
+        denyBtn.textContent = "No · Block";
+        durationSelect.value = "0";
+        window.clearTimeout(hideTimer);
+
+        const resource = String(req.resource || "").toLowerCase();
+        const sev = SEVERITY[RISK[resource] || "standard"];
+        interceptCard.style.setProperty("--sev", sev.rgb);
+
+        interceptIcon.textContent = sev.icon;
+        interceptTitle.textContent = sev.title;
+        interceptDot.className = "sev-glow ml-auto h-2 w-2 shrink-0 rounded-full animate-pulseglow";
+
+        interceptText.innerHTML =
+          '<span class="sev-text font-semibold">' + esc(req.app_name) + "</span> is requesting access to " +
+          '<span class="sev-text font-semibold">' + esc(req.resource) + "</span>.";
+
+        interceptScope.textContent = "Scope · " + (RESOURCE_META[resource] || "device resource") + " · " + sev.tier;
+
+        const score = Number(req.current_score);
+        if (Number.isFinite(score) && score < 20) playSiren();
+        else playChime();
+
+        const justified = req.is_justified === true;
+        const SOURCE_LABELS = {
+          "heuristic": "local heuristic",
+          "heuristic-fallback": "heuristic fallback",
+          "llm-error": "API error · fail-closed",
+        };
+        const source = req.analysis_source
+          ? " · " + (SOURCE_LABELS[req.analysis_source] || req.analysis_source)
+          : "";
+        const violations = (req.violations || [])
+          .map((v) => '<li class="flex gap-2 text-[11px] leading-relaxed text-rose-700 bg-rose-50 border border-rose-200 rounded-md px-2 py-1"><span class="text-rose-500 font-bold">▸</span><span>' + esc(v) + "</span></li>")
+          .join("");
+
+        interceptMeta.innerHTML =
+          '<div class="sev-reason rounded-xl p-3.5 border border-slate-200 bg-slate-50/80">' +
+          '<p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">AI Justification' + esc(source) + "</p>" +
+          '<p class="mt-1 text-[13px] leading-relaxed text-slate-800">“' + esc(req.reason || "No explanation provided.") + "”</p>" +
+          "</div>" +
+          '<div class="mt-3 flex flex-wrap items-center gap-2">' +
+          '<span class="chip chip-sev">' + esc(sev.tier) + "</span>" +
+          '<span class="chip ' + (justified ? "chip-ok" : "chip-bad") + '">AI · ' + (justified ? "justified" : "not justified") + "</span>" +
+          '<span class="ml-auto font-mono text-[10px] text-slate-400 uppercase tracking-wider">' + esc(req.app_name) + " · " + esc(req.resource) + "</span>" +
+          "</div>" +
+          (violations ? '<ul class="mt-3 space-y-1">' + violations + "</ul>" : "");
+
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        requestAnimationFrame(() => interceptCard.classList.add("is-in"));
+        startCountdown(req.expires_in != null ? req.expires_in : 30);
+        interceptCard.setAttribute("tabindex", "-1");
+        interceptCard.focus();
+      }
+
+      function hideIntercept() {
+        activeRequest = null;
+        resolving = false;
+        window.clearInterval(countdownTimer);
+        countdownTimer = null;
+
+        interceptCard.classList.remove("is-in");
+        window.clearTimeout(hideTimer);
+        hideTimer = window.setTimeout(() => {
+          modal.classList.add("hidden");
+          modal.classList.remove("flex");
+        }, 170);
+      }
+
+      async function pollPending() {
+        if (document.hidden) return;
+
+        let queue;
+        try {
+          queue = await getJSON("/get_pending");
+          setLink(true);
+        } catch (err) {
+          setLink(false);
+          return;
+        }
+
+        if (activeRequest) {
+          const stillPending = queue.some((r) => r.request_id === activeRequest.request_id);
+          if (!stillPending) {
+            const expired = autoExpired;
+            hideIntercept();
+            if (expired) {
+              toast("info", "Auto-resolved on timeout", "No verdict was received — the request was allowed once.");
+              refreshAll();
+            }
+          }
+          return;
+        }
+
+        if (modal.classList.contains("flex")) return;
+        if (!queue.length) return;
+
+        showIntercept(queue[queue.length - 1]);
+      }
+
+      async function resolveIntercept(action) {
+        if (!activeRequest || resolving) return;
+        const target = activeRequest;
+
+        resolving = true;
+        allowBtn.disabled = true;
+        denyBtn.disabled = true;
+
+        const activeBtn = action === "Allowed" ? allowBtn : denyBtn;
+        const original = activeBtn.textContent;
+        activeBtn.textContent = "Applying…";
+
+        const duration = action === "Allowed" ? (parseInt(durationSelect.value, 10) || 0) : 0;
+
+        try {
+          await postJSON("/resolve_request", {
+            request_id: target.request_id,
+            action: action,
+            duration: duration,
+          });
+          setLink(true);
+
+          const scope = action === "Allowed" ? (duration > 0 ? " for " + duration + "s" : " permanently") : "";
+          lastActionEl.textContent =
+            target.app_name + " · " + target.resource + " → " + action.toUpperCase() + scope + " @ " + new Date().toLocaleTimeString();
+          lastActionEl.className = action === "Allowed" ? "text-emerald-700 font-medium" : "text-rose-700 font-medium";
+
+          if (action === "Allowed") {
+            toast("ok", "Access granted", target.app_name + " may use " + target.resource + (duration > 0 ? " for " + duration + "s" : "") + ".");
+          } else {
+            toast("err", "Access blocked", target.app_name + " denied " + target.resource + " · trust −7.");
+          }
+        } catch (err) {
+          setLink(false);
+          toast("err", "Verdict failed", "The request may have already timed out. Refreshing policy state.");
+        } finally {
+          activeBtn.textContent = original;
+          hideIntercept();
+          refreshAll();
+        }
+      }
+
+      allowBtn.addEventListener("click", () => resolveIntercept("Allowed"));
+      denyBtn.addEventListener("click", () => resolveIntercept("Blocked"));
+
+      /* ---------------- notifications ---------------- */
+      const notifPanel = $("notifPanel");
+      const notifDrawer = $("notifDrawer");
+      const notifList = $("notifList");
+      const notifBadge = $("notifBadge");
+      const notifCount = $("notifCount");
+      const notifBtn = $("notifBtn");
+      const notifClose = $("notifClose");
+      const notifBackdrop = $("notifBackdrop");
+
+      let notifOpen = false;
+      let notifItems = [];
+      let notifSeen = 0;
+
+      function setBadge(unread) {
+        if (unread > 0) {
+          notifBadge.textContent = unread > 9 ? "9+" : String(unread);
+          notifBadge.classList.remove("hidden");
+          notifBadge.classList.add("flex");
+        } else {
+          notifBadge.classList.add("hidden");
+          notifBadge.classList.remove("flex");
+        }
+      }
+
+      function getNotificationColor(resource) {
+        const res = String(resource || "").trim().toLowerCase();
+        if (res === "microphone" || res === "location" || res === "camera") {
+          return {
+            border: "border-red-300",
+            bg: "bg-red-50/90",
+            hover: "hover:border-red-400 hover:bg-red-50",
+            dot: "bg-red-500",
+            badge: "text-red-700 bg-red-100 border-red-200",
+            category: "Red · Sensor Access",
+          };
+        }
+        if (res === "calendar" || res === "network" || res === "bluetooth") {
+          return {
+            border: "border-yellow-300",
+            bg: "bg-yellow-50/90",
+            hover: "hover:border-yellow-400 hover:bg-yellow-50",
+            dot: "bg-yellow-500",
+            badge: "text-yellow-800 bg-yellow-100 border-yellow-200",
+            category: "Yellow · Connectivity / Schedule",
+          };
+        }
+        // Orange for all other resources (contacts, sms, files, storage, etc.)
+        return {
+          border: "border-orange-300",
+          bg: "bg-orange-50/90",
+          hover: "hover:border-orange-400 hover:bg-orange-50",
+          dot: "bg-orange-500",
+          badge: "text-orange-800 bg-orange-100 border-orange-200",
+          category: "Orange · Data & Storage",
+        };
+      }
+
+      function renderNotifications() {
+        notifCount.textContent = String(notifItems.length);
+
+        if (!notifItems.length) {
+          notifList.innerHTML =
+            '<div class="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center">' +
+            '<p class="text-[13px] font-semibold text-slate-700">No alerts</p>' +
+            '<p class="mt-1 text-[11px] leading-relaxed text-slate-500">Admin denials (−7 trust) will appear here.</p>' +
+            "</div>";
+          return;
+        }
+
+        notifList.innerHTML = notifItems.map((n) => {
+          let resource = n.resource;
+          if (!resource && n.message) {
+            const m = n.message.match(/requested\s+([a-zA-Z0-9_-]+)/i);
+            if (m) resource = m[1];
+          }
+          const c = getNotificationColor(resource);
+
+          return (
+            '<article class="rounded-xl border ' + c.border + " " + c.bg + ' ' + c.hover + ' p-3.5 shadow-sm transition-all">' +
+            '<div class="flex items-center gap-2">' +
+            '<span class="h-2.5 w-2.5 shrink-0 rounded-full ' + c.dot + '"></span>' +
+            '<span class="min-w-0 truncate text-[12px] font-semibold text-slate-900">' + esc(n.app_name) + "</span>" +
+            (resource ? '<span class="chip shrink-0 text-[10px] font-mono ' + c.badge + '">' + esc(resource) + "</span>" : "") +
+            '<span class="chip ml-auto shrink-0 font-mono text-[11px] ' + c.badge + '">−' + esc(n.points) + " pts</span>" +
+            "</div>" +
+            '<p class="mt-2 text-[12px] leading-relaxed text-slate-800">' + esc(n.message) + "</p>" +
+            '<div class="mt-2.5 flex items-center justify-between border-t border-slate-900/5 pt-2">' +
+            '<span class="text-[10px] font-semibold uppercase tracking-wider text-slate-600">' + esc(c.category) + "</span>" +
+            '<span class="font-mono text-[10px] text-slate-500">' + esc(fmtDateTime(n.timestamp)) + "</span>" +
+            "</div>" +
+            "</article>"
+          );
+        }).join("");
+      }
+
+      async function fetchNotifications() {
+        if (document.hidden) return;
+        try {
+          const items = await getJSON("/get_notifications");
+          setLink(true);
+          notifItems = Array.isArray(items) ? items : [];
+          notifCount.textContent = String(notifItems.length);
+
+          if (notifOpen) {
+            notifSeen = notifItems.length;
+            renderNotifications();
+          } else {
+            setBadge(Math.max(0, notifItems.length - notifSeen));
+          }
+        } catch (err) {
+          setLink(false);
+        }
+      }
+
+      function openNotif() {
+        notifOpen = true;
+        notifSeen = notifItems.length;
+        setBadge(0);
+        renderNotifications();
+        notifPanel.classList.remove("hidden");
+        requestAnimationFrame(() => notifDrawer.classList.remove("translate-x-full"));
+        notifClose.focus();
+        fetchNotifications();
+      }
+
+      function closeNotif() {
+        notifOpen = false;
+        notifDrawer.classList.add("translate-x-full");
+        window.setTimeout(() => notifPanel.classList.add("hidden"), 300);
+      }
+
+      notifBtn.addEventListener("click", openNotif);
+      notifClose.addEventListener("click", closeNotif);
+      notifBackdrop.addEventListener("click", closeNotif);
+
+      /* ---------------- audit ---------------- */
+      const auditBtn = $("auditBtn");
+      const auditBtnIcon = $("auditBtnIcon");
+      const auditBtnLabel = $("auditBtnLabel");
+      const auditModal = $("auditModal");
+      const auditCard = $("auditCard");
+      const auditBody = $("auditBody");
+      const auditClose = $("auditClose");
+
+      function openAuditModal() {
+        auditModal.classList.remove("hidden");
+        auditModal.classList.add("flex");
+        requestAnimationFrame(() => auditCard.classList.add("is-in"));
+      }
+
+      function closeAuditModal() {
+        auditCard.classList.remove("is-in");
+        window.setTimeout(() => {
+          auditModal.classList.add("hidden");
+          auditModal.classList.remove("flex");
+        }, 180);
+      }
+
+      const AUDIT_TONES = {
+        hard: { hex: "#059669", text: "text-emerald-700", chip: "chip-ok", label: "Hardened" },
+        medium: { hex: "#d97706", text: "text-amber-700", chip: "chip-warn", label: "Needs attention" },
+        crit: { hex: "#e11d48", text: "text-rose-700", chip: "chip-bad", label: "Critical risk" },
+      };
+
+      function renderAuditLoading() {
+        auditBody.innerHTML =
+          '<div class="flex flex-col items-center justify-center gap-3 py-10">' +
+          '<div class="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-800"></div>' +
+          '<p class="text-[13px] font-semibold text-slate-800">Auditing permission matrix</p>' +
+          '<p class="text-[11px] text-slate-500">Evaluating every enabled grant against least-privilege standards</p>' +
+          "</div>";
+      }
+
+      function renderAudit(data) {
+        const score = Math.max(0, Math.min(100, Number(data.overall_score) || 0));
+        const tone = score >= 80 ? AUDIT_TONES.hard : (score >= 50 ? AUDIT_TONES.medium : AUDIT_TONES.crit);
+        const source = String(data.source || "");
+        const sourceLabel = source.indexOf("llm") === 0
+          ? "LLM auditor · " + source.split(":")[1]
+          : "Local Zero-Trust heuristic";
+        const donut = "background:conic-gradient(" + tone.hex + " " + score + "%, #e2e8f0 0)";
+
+        auditBody.innerHTML =
+          '<div class="flex items-center gap-5">' +
+          '<div class="relative grid h-[104px] w-[104px] shrink-0 place-items-center rounded-full" style="' + donut + '">' +
+          '<div class="grid h-[86px] w-[86px] place-items-center rounded-full bg-white shadow-inner">' +
+          '<span class="font-mono text-[30px] font-bold leading-none ' + tone.text + '">' + score + "</span>" +
+          "</div>" +
+          "</div>" +
+          '<div class="min-w-0">' +
+          '<p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Posture score</p>' +
+          '<span class="chip ' + tone.chip + ' mt-1.5">' + tone.label + "</span>" +
+          '<p class="mt-2 text-[11px] text-slate-500">' + esc(sourceLabel) + "</p>" +
+          "</div>" +
+          "</div>" +
+          '<div class="mt-5 rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">' +
+          '<p class="text-[11px] font-semibold uppercase tracking-wider text-slate-700">Audit report</p>' +
+          '<p class="mt-1.5 whitespace-pre-line text-[12px] leading-relaxed text-slate-700">' + esc(data.report || "No report provided.") + "</p>" +
+          "</div>" +
+          '<p class="mt-3 text-[11px] text-slate-400">Generated ' + esc(fmtDateTime(data.analysed_at)) + "</p>";
+
+        toast("info", "Security checkup complete", "Posture score " + score + " / 100 · " + tone.label.toLowerCase());
+      }
+
+      async function runAudit() {
+        if (auditBtn.disabled) return;
+
+        auditBtn.disabled = true;
+        auditBtnIcon.innerHTML = '<span class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700"></span>';
+        auditBtnLabel.textContent = "Auditing";
+
+        openAuditModal();
+        renderAuditLoading();
+
+        try {
+          const data = await getJSON("/run_audit");
+          setLink(true);
+          renderAudit(data);
+        } catch (err) {
+          setLink(false);
+          auditBody.innerHTML =
+            '<div class="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">' +
+            '<p class="text-[13px] font-semibold text-rose-800">Audit unavailable</p>' +
+            '<p class="mt-1 text-[12px] text-rose-600">Policy engine unreachable. Verify the API is running on port 8000.</p>' +
+            "</div>";
+        } finally {
+          auditBtn.disabled = false;
+          auditBtnIcon.textContent = "◆";
+          auditBtnLabel.textContent = "Run Checkup";
+        }
+      }
+
+      auditBtn.addEventListener("click", runAudit);
+      auditClose.addEventListener("click", closeAuditModal);
+      auditModal.addEventListener("click", (e) => { if (e.target === auditModal) closeAuditModal(); });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape") return;
+        if (notifOpen) closeNotif();
+        if (!auditModal.classList.contains("hidden")) closeAuditModal();
+      });
+
+      /* ---------------- refresh helper ---------------- */
+      function refreshAll() {
+        pollScores();
+        pollLogs();
+        pollTrustHistory();
+        fetchNotifications();
+        pollPending();
+      }
+
+      /* ---------------- bootstrap ---------------- */
+      buildMatrix();
+      initChart();
+      loadPermissions(false);
+      refreshAll();
+      tickClock();
+
+      window.setInterval(tickClock, 1000);
+      window.setInterval(pollScores, POLL_MS);
+      window.setInterval(pollLogs, POLL_MS);
+      window.setInterval(pollTrustHistory, GRAPH_MS);
+      window.setInterval(fetchNotifications, NOTIF_MS);
+      window.setInterval(pollPending, INTERCEPT_POLL_MS);
+      window.setInterval(() => loadPermissions(true), PERM_MS);
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshAll();
+      });
+    })();
+  </script>
+</body>
+
+</html>
