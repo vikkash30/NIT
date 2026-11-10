@@ -548,6 +548,50 @@
 
   <div class="aurora animate-drift" aria-hidden="true"></div>
 
+  <!-- ============================ LOGIN GATE ============================ -->
+  <div id="loginGate" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950 p-4 transition-opacity duration-300">
+    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <div class="absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl"></div>
+      <div class="absolute -right-24 bottom-1/4 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl"></div>
+    </div>
+
+    <div class="relative w-full max-w-sm rounded-2xl border border-white/10 bg-gray-900/80 p-7 shadow-2xl backdrop-blur-xl">
+      <div class="flex items-center gap-3">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10">
+          <span class="font-mono text-base font-semibold text-emerald-400">E</span>
+        </span>
+        <div class="min-w-0">
+          <h1 class="text-[15px] font-semibold text-white">E.D.I.T.H. Security Gateway</h1>
+          <p class="mt-0.5 text-[11px] text-gray-400">Restricted access · administrator sign-in</p>
+        </div>
+      </div>
+
+      <form id="loginForm" class="mt-7 space-y-4" novalidate>
+        <div>
+          <label for="loginUser" class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-gray-400">Username</label>
+          <input id="loginUser" name="username" type="text" autocomplete="username" placeholder="admin"
+            class="w-full rounded-lg border border-white/10 bg-gray-950/70 px-3.5 py-2.5 text-[13px] text-gray-100 placeholder-gray-600 outline-none transition-colors focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20" />
+        </div>
+        <div>
+          <label for="loginPass" class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-gray-400">Password</label>
+          <input id="loginPass" name="password" type="password" autocomplete="current-password" placeholder="••••••"
+            class="w-full rounded-lg border border-white/10 bg-gray-950/70 px-3.5 py-2.5 text-[13px] text-gray-100 placeholder-gray-600 outline-none transition-colors focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20" />
+        </div>
+
+        <p id="loginError" class="hidden rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] font-medium text-red-400">
+          Invalid credentials
+        </p>
+
+        <button type="submit"
+          class="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg shadow-emerald-900/40 transition-colors hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+          Login
+        </button>
+      </form>
+
+      <p class="mt-5 text-center text-[10px] text-gray-600">Zero-trust continuous authorization console</p>
+    </div>
+  </div>
+
   <!-- ============================ TOP COMMAND BAR ============================ -->
   <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
     <div class="mx-auto flex max-w-[1800px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-5">
@@ -739,6 +783,34 @@
               Every score movement is appended to the timeline
             </p>
           </div>
+
+          <div class="glass rounded-xl p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="panel-title">System Maintenance</h2>
+                <p class="mt-0.5 text-[11px] text-slate-500">Wipe access logs, alerts, and reset trust scores</p>
+              </div>
+              <button id="resetBtn" type="button"
+                class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded inline-flex items-center gap-2 text-[12px] shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <span id="resetBtnIcon" class="text-[12px] leading-none">⟲</span>
+                <span id="resetBtnLabel">Reset System Data</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== GLOBAL RESOURCE ANALYTICS ==================== -->
+        <section class="glass rounded-xl p-4 xl:col-span-12">
+          <div class="mb-3 flex flex-wrap items-center gap-2">
+            <h2 class="panel-title">Global Resource Analytics</h2>
+            <span id="globalResourceHint" class="chip chip-mute ml-auto">—</span>
+          </div>
+          <div class="relative mx-auto h-[320px] w-full max-w-[560px]">
+            <canvas id="globalResourceChart" aria-label="Resource requests across all apps" role="img"></canvas>
+          </div>
+          <p class="mt-2 text-center text-[11px] text-slate-400">
+            Total resource requests across every monitored app
+          </p>
         </section>
       </div>
     </main>
@@ -869,17 +941,6 @@
         <button id="allowBtn" type="button" class="allow-btn">Yes · Allow</button>
         <button id="denyBtn" type="button" class="sev-btn">No · Block</button>
       </div>
-
-      <div class="border-t border-slate-100 bg-slate-50/80 px-5 py-2.5">
-        <div class="flex items-center gap-2">
-          <span class="text-[11px] text-slate-500">Auto-decision in</span>
-          <span id="cdText" class="font-mono text-[11px] font-medium tabular-nums text-slate-700">30s</span>
-          <div class="ml-auto h-1.5 w-28 overflow-hidden rounded-full bg-slate-200">
-            <div id="cdFill" class="sev-bar h-full w-full rounded-full transition-[width] duration-200 ease-linear">
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -933,6 +994,32 @@
                        transition-colors duration-150 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700">✕</button>
       </div>
       <div id="auditBody" class="p-5"></div>
+    </div>
+  </div>
+
+  <!-- ==================== UPI PERMISSION ANALYTICS ==================== -->
+  <div id="upiAnalyticsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog"
+    aria-modal="true" aria-labelledby="upiAnalyticsTitle">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+
+    <div id="upiAnalyticsCard"
+      class="modal-card relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl border border-slate-200">
+      <div class="flex items-center gap-3 border-b border-slate-200 bg-slate-50/70 px-5 py-4">
+        <span class="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-[15px] leading-none shadow-sm">📊</span>
+        <div>
+          <p id="upiAnalyticsTitle" class="text-[13px] font-semibold text-slate-900">Permission Analytics</p>
+          <p class="mt-0.5 text-[11px] text-slate-500">Granted access by UPI client</p>
+        </div>
+        <button id="upiAnalyticsClose" type="button" aria-label="Close analytics" class="ml-auto grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-slate-400
+                       transition-colors duration-150 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700">✕</button>
+      </div>
+
+      <div class="p-5">
+        <div class="relative mx-auto h-[280px] w-full max-w-[360px]">
+          <canvas id="upiAnalyticsChart" aria-label="Allowed permissions by UPI app" role="img"></canvas>
+        </div>
+        <p id="upiAnalyticsHint" class="mt-3 text-center text-[11px] text-slate-400"></p>
+      </div>
     </div>
   </div>
 
@@ -1151,6 +1238,9 @@
           '<p class="text-[11px] text-slate-500 mt-0.5">High-frequency payment clients (Paytm &amp; YPay)</p>' +
           '</div>' +
           '<span id="upiCategoryCount" class="chip chip-mute shrink-0">—</span>' +
+          '<button id="upiAnalyticsBtn" type="button" aria-label="View UPI permission usage analytics" class="shrink-0 inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-2 py-1 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">' +
+          '<span aria-hidden="true">📊</span><span class="hidden sm:inline">View Usage</span>' +
+          '</button>' +
           '<svg class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open/upi:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
           '<path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/>' +
           '</svg>' +
@@ -1184,6 +1274,17 @@
         const upi = $("upiBracket");
         if (upi) {
           upi.addEventListener("toggle", syncExpandLabel);
+        }
+
+        // The "View Usage" button lives inside the <summary>, so stop it from
+        // toggling the master accordion and open the analytics modal instead.
+        const upiAnalyticsBtn = $("upiAnalyticsBtn");
+        if (upiAnalyticsBtn) {
+          upiAnalyticsBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openUpiAnalytics();
+          });
         }
 
         syncExpandLabel();
@@ -1642,6 +1743,7 @@
         try {
           allLogs = await getJSON("/get_logs");
           renderLogs(false);
+          renderGlobalChart();
           setLink(true);
         } catch (err) { setLink(false); }
       }
@@ -1782,40 +1884,14 @@
       const durationSelect = $("durationSelect");
       const allowBtn = $("allowBtn");
       const denyBtn = $("denyBtn");
-      const cdText = $("cdText");
-      const cdFill = $("cdFill");
 
       let activeRequest = null;
       let resolving = false;
-      let countdownTimer = null;
       let hideTimer = null;
-      let autoExpired = false;
-
-      function startCountdown(seconds) {
-        window.clearInterval(countdownTimer);
-        const total = Math.max(1, Number(seconds) || 30);
-        const deadline = Date.now() + total * 1000;
-        autoExpired = false;
-
-        const tick = () => {
-          const left = Math.max(0, deadline - Date.now());
-          cdFill.style.width = Math.max(0, Math.min(100, (left / (total * 1000)) * 100)) + "%";
-          cdText.textContent = Math.ceil(left / 1000) + "s";
-          if (left <= 0) {
-            autoExpired = true;
-            window.clearInterval(countdownTimer);
-            countdownTimer = null;
-          }
-        };
-
-        tick();
-        countdownTimer = window.setInterval(tick, 200);
-      }
 
       function showIntercept(req) {
         activeRequest = req;
         resolving = false;
-        autoExpired = false;
         allowBtn.disabled = false;
         denyBtn.disabled = false;
         allowBtn.textContent = "Yes · Allow";
@@ -1869,7 +1945,6 @@
         modal.classList.remove("hidden");
         modal.classList.add("flex");
         requestAnimationFrame(() => interceptCard.classList.add("is-in"));
-        startCountdown(req.expires_in != null ? req.expires_in : 30);
         interceptCard.setAttribute("tabindex", "-1");
         interceptCard.focus();
       }
@@ -1877,8 +1952,6 @@
       function hideIntercept() {
         activeRequest = null;
         resolving = false;
-        window.clearInterval(countdownTimer);
-        countdownTimer = null;
 
         interceptCard.classList.remove("is-in");
         window.clearTimeout(hideTimer);
@@ -1903,12 +1976,8 @@
         if (activeRequest) {
           const stillPending = queue.some((r) => r.request_id === activeRequest.request_id);
           if (!stillPending) {
-            const expired = autoExpired;
             hideIntercept();
-            if (expired) {
-              toast("info", "Auto-resolved on timeout", "No verdict was received — the request was allowed once.");
-              refreshAll();
-            }
+            refreshAll();
           }
           return;
         }
@@ -1953,7 +2022,7 @@
           }
         } catch (err) {
           setLink(false);
-          toast("err", "Verdict failed", "The request may have already timed out. Refreshing policy state.");
+          toast("err", "Verdict failed", "Could not submit verdict. Refreshing policy state.");
         } finally {
           activeBtn.textContent = original;
           hideIntercept();
@@ -2104,6 +2173,9 @@
       const auditBtn = $("auditBtn");
       const auditBtnIcon = $("auditBtnIcon");
       const auditBtnLabel = $("auditBtnLabel");
+      const resetBtn = $("resetBtn");
+      const resetBtnIcon = $("resetBtnIcon");
+      const resetBtnLabel = $("resetBtnLabel");
       const auditModal = $("auditModal");
       const auditCard = $("auditCard");
       const auditBody = $("auditBody");
@@ -2201,10 +2273,309 @@
       auditClose.addEventListener("click", closeAuditModal);
       auditModal.addEventListener("click", (e) => { if (e.target === auditModal) closeAuditModal(); });
 
+      /* ---------------- reset system data ---------------- */
+      async function runReset() {
+        if (resetBtn.disabled) return;
+
+        const ok = window.confirm("Are you sure? This will wipe all logs and reset trust scores.");
+        if (!ok) return;
+
+        resetBtn.disabled = true;
+        resetBtnIcon.innerHTML = '<span class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>';
+        resetBtnLabel.textContent = "Resetting…";
+
+        try {
+          const data = await postJSON("/api/reset_database", {});
+          setLink(true);
+
+          notifSeen = 0;
+          notifItems = [];
+          renderNotifications();
+          setBadge(0);
+
+          scoreRows.forEach((ref) => {
+            window.clearTimeout(ref.timer);
+            ref.score = null;
+            ref.delta.textContent = "";
+            ref.delta.className = "score-delta ml-auto shrink-0 font-mono text-[11px]";
+          });
+
+          logsSig = "";
+          allLogs = [];
+          renderLogs(true);
+
+          lastActionEl.textContent = "system data reset @ " + new Date().toLocaleTimeString();
+          lastActionEl.className = "text-rose-700 font-medium";
+
+          if (activeRequest) {
+            hideIntercept();
+          }
+
+          await Promise.all([
+            pollScores(),
+            pollLogs(),
+            pollTrustHistory(),
+            fetchNotifications(),
+            loadPermissions(true),
+            pollPending(),
+          ]);
+
+          toast("ok", "System data reset", data.message || "Access logs cleared and trust scores reset.");
+        } catch (err) {
+          setLink(false);
+          toast("err", "Reset failed", "Could not reach /api/reset_database. Verify the API is running on port 8000.");
+        } finally {
+          resetBtn.disabled = false;
+          resetBtnIcon.textContent = "⟲";
+          resetBtnLabel.textContent = "Reset System Data";
+        }
+      }
+
+      resetBtn.addEventListener("click", runReset);
+
+      /* ---------------- UPI permission analytics ---------------- */
+      const upiAnalyticsModal = $("upiAnalyticsModal");
+      const upiAnalyticsCard = $("upiAnalyticsCard");
+      const upiAnalyticsClose = $("upiAnalyticsClose");
+      const upiAnalyticsHint = $("upiAnalyticsHint");
+      const upiAnalyticsCanvas = $("upiAnalyticsChart");
+      let upiAnalyticsChart = null;
+
+      // Count "Allowed" log entries per UPI client (same allLogs feeding the Database tab).
+      function countAllowedByUpiApp() {
+        const counts = { paytm: 0, ypay: 0 };
+        (allLogs || []).forEach((log) => {
+          if (String(log.status || "").toLowerCase() !== "allowed") return;
+          const name = String(log.app_name || "").trim().toLowerCase();
+          if (name === "paytm") counts.paytm += 1;
+          else if (name === "ypay") counts.ypay += 1;
+        });
+        return counts;
+      }
+
+      function openUpiAnalytics() {
+        if (!upiAnalyticsModal) return;
+        upiAnalyticsModal.classList.remove("hidden");
+        upiAnalyticsModal.classList.add("flex");
+        requestAnimationFrame(() => upiAnalyticsCard.classList.add("is-in"));
+        renderUpiAnalytics();
+      }
+
+      function closeUpiAnalytics() {
+        if (!upiAnalyticsModal) return;
+        upiAnalyticsCard.classList.remove("is-in");
+        window.setTimeout(() => {
+          upiAnalyticsModal.classList.add("hidden");
+          upiAnalyticsModal.classList.remove("flex");
+        }, 180);
+      }
+
+      function renderUpiAnalytics() {
+        if (!upiAnalyticsCanvas || typeof window.Chart === "undefined") return;
+
+        const counts = countAllowedByUpiApp();
+        const fresh = counts.paytm === 0 && counts.ypay === 0;
+        // Never show an empty chart in the demo: fall back to sample data.
+        const paytm = fresh ? 4 : counts.paytm;
+        const ypay = fresh ? 2 : counts.ypay;
+
+        // Destroy any previous instance so reopening never glitches the canvas.
+        if (upiAnalyticsChart) {
+          upiAnalyticsChart.destroy();
+          upiAnalyticsChart = null;
+        }
+
+        const total = paytm + ypay;
+        upiAnalyticsHint.textContent = fresh
+          ? "Showing sample data — no allowed events logged yet."
+          : total + " allowed event" + (total === 1 ? "" : "s") + " across the UPI category.";
+
+        upiAnalyticsChart = new Chart(upiAnalyticsCanvas, {
+          type: "doughnut",
+          data: {
+            labels: ["Paytm", "YPay"],
+            datasets: [
+              {
+                data: [paytm, ypay],
+                backgroundColor: [GRAPH_META.paytm.color, GRAPH_META.ypay.color],
+                borderColor: "#ffffff",
+                borderWidth: 3,
+                hoverOffset: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "58%",
+            animation: { duration: 600, easing: "easeOutQuart" },
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  color: "#475569",
+                  font: { size: 12, family: "Inter, system-ui, sans-serif", weight: "500" },
+                  boxWidth: 8,
+                  boxHeight: 8,
+                  padding: 14,
+                  usePointStyle: true,
+                  pointStyle: "circle",
+                },
+              },
+              tooltip: {
+                backgroundColor: "#ffffff",
+                borderColor: "#e2e8f0",
+                borderWidth: 1,
+                titleColor: "#0f172a",
+                bodyColor: "#334155",
+                titleFont: { size: 12, family: "Inter, system-ui, sans-serif", weight: "600" },
+                bodyFont: { size: 11, family: "Inter, system-ui, sans-serif" },
+                padding: 10,
+                cornerRadius: 8,
+                displayColors: true,
+                boxWidth: 8,
+                boxHeight: 8,
+                usePointStyle: true,
+                boxPadding: 4,
+                callbacks: {
+                  label: (ctx) => " " + ctx.label + ": " + ctx.parsed + " allowed",
+                },
+              },
+            },
+          },
+        });
+      }
+
+      upiAnalyticsClose.addEventListener("click", closeUpiAnalytics);
+      upiAnalyticsModal.addEventListener("click", (e) => {
+        if (e.target === upiAnalyticsModal) closeUpiAnalytics();
+      });
+
+      /* ---------------- global resource analytics ---------------- */
+      const globalResourceCanvas = $("globalResourceChart");
+      const globalResourceHint = $("globalResourceHint");
+      let globalResourceChart = null;
+
+      // Distinct cool-toned palette (purples / blues / greens / oranges).
+      const RESOURCE_PALETTE = [
+        "#6366f1", "#0284c7", "#0ea5e9", "#22c55e", "#14b8a6",
+        "#8b5cf6", "#0d9488", "#f59e0b", "#4f46e5", "#06b6d4",
+      ];
+
+      function renderGlobalChart() {
+        if (!globalResourceCanvas || typeof window.Chart === "undefined") return;
+
+        // Tally every logged request by its resource, across all apps.
+        const counts = {};
+        (allLogs || []).forEach((log) => {
+          const res = String(log.requested_resource || "").trim().toLowerCase();
+          if (!res) return;
+          counts[res] = (counts[res] || 0) + 1;
+        });
+
+        const labels = Object.keys(counts);
+        const data = labels.map((k) => counts[k]);
+        const total = data.reduce((a, b) => a + b, 0);
+
+        // Destroy the previous instance so redraws never overlap the canvas.
+        if (globalResourceChart) {
+          globalResourceChart.destroy();
+          globalResourceChart = null;
+        }
+
+        globalResourceHint.textContent = total
+          ? total + " request" + (total === 1 ? "" : "s") + " logged"
+          : "no requests yet";
+
+        globalResourceChart = new Chart(globalResourceCanvas, {
+          type: "pie",
+          data: {
+            labels: labels.map((k) => k.charAt(0).toUpperCase() + k.slice(1)),
+            datasets: [
+              {
+                data,
+                backgroundColor: labels.map((_, i) => RESOURCE_PALETTE[i % RESOURCE_PALETTE.length]),
+                borderColor: "#ffffff",
+                borderWidth: 2,
+                hoverOffset: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: "easeOutQuart" },
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  color: "#475569",
+                  font: { size: 11, family: "Inter, system-ui, sans-serif", weight: "500" },
+                  boxWidth: 8,
+                  boxHeight: 8,
+                  padding: 12,
+                  usePointStyle: true,
+                  pointStyle: "circle",
+                },
+              },
+              tooltip: {
+                backgroundColor: "#ffffff",
+                borderColor: "#e2e8f0",
+                borderWidth: 1,
+                titleColor: "#0f172a",
+                bodyColor: "#334155",
+                titleFont: { size: 12, family: "Inter, system-ui, sans-serif", weight: "600" },
+                bodyFont: { size: 11, family: "Inter, system-ui, sans-serif" },
+                padding: 10,
+                cornerRadius: 8,
+                displayColors: true,
+                boxWidth: 8,
+                boxHeight: 8,
+                usePointStyle: true,
+                boxPadding: 4,
+                callbacks: {
+                  label: (ctx) => " " + ctx.label + ": " + ctx.parsed + " request" + (ctx.parsed === 1 ? "" : "s"),
+                },
+              },
+            },
+          },
+        });
+      }
+
+      /* ---------------- login gate ---------------- */
+      const loginGate = $("loginGate");
+      const loginForm = $("loginForm");
+      const loginUser = $("loginUser");
+      const loginPass = $("loginPass");
+      const loginError = $("loginError");
+
+      function attemptLogin(event) {
+        event.preventDefault();
+
+        if (loginUser.value.trim() === "admin" && loginPass.value.trim() === "admin") {
+          loginError.classList.add("hidden");
+          loginGate.classList.add("opacity-0");
+          window.setTimeout(() => {
+            loginGate.classList.add("hidden");
+            loginGate.classList.remove("flex");
+            // The dashboard is now visible — draw the charts against a real layout.
+            renderGlobalChart();
+            if (trustChart) requestAnimationFrame(() => trustChart.resize());
+          }, 300);
+        } else {
+          loginError.classList.remove("hidden");
+          loginPass.value = "";
+          loginPass.focus();
+        }
+      }
+
+      loginForm.addEventListener("submit", attemptLogin);
+
       document.addEventListener("keydown", (e) => {
         if (e.key !== "Escape") return;
         if (notifOpen) closeNotif();
         if (!auditModal.classList.contains("hidden")) closeAuditModal();
+        if (!upiAnalyticsModal.classList.contains("hidden")) closeUpiAnalytics();
       });
 
       /* ---------------- refresh helper ---------------- */

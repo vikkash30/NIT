@@ -159,10 +159,13 @@ def _record_llm_failure() -> None:
 # ---------------------------------------------------------------------------
 # Database setup
 # ---------------------------------------------------------------------------
-# Single shared in-memory connection. `check_same_thread=False` allows the
-# connection to be used across FastAPI's threadpool workers; DB_LOCK serialises
-# access so parallel sync endpoints can never interleave a write/read.
-DB_CONNECTION = sqlite3.connect(":memory:", check_same_thread=False)
+# Persistent, file-backed database so data survives a restart. The file lives
+# next to this module (edith.db) regardless of the working directory.
+# `check_same_thread=False` allows the connection to be used across FastAPI's
+# threadpool workers; DB_LOCK serialises access so parallel sync endpoints can
+# never interleave a write/read.
+DB_PATH = Path(__file__).resolve().parent / "edith.db"
+DB_CONNECTION = sqlite3.connect(DB_PATH, check_same_thread=False)
 DB_CONNECTION.row_factory = sqlite3.Row
 DB_LOCK = threading.RLock()
 
@@ -273,11 +276,9 @@ REQUEST_HISTORY: dict[str, deque] = defaultdict(deque)
 # escalated here.
 pending_requests: dict[str, dict] = {}
 
-INTERCEPT_TIMEOUT_SECONDS = 30   # give the admin this long to respond
-INTERCEPT_POLL_SECONDS = 1       # how often the waiting coroutine re-checks
-# Verdict applied when nobody answers in time.
-INTERCEPT_TIMEOUT_VERDICT = "Allowed"
-PENDING_MAX_AGE_SECONDS = 300    # safety sweep for abandoned requests
+# The waiting coroutine re-checks this often. There is deliberately NO timeout:
+# a parked request stays pending until an admin explicitly resolves it.
+INTERCEPT_POLL_SECONDS = 1
 
 # Notification hub: consumed by GET /get_notifications.
 notifications: list[dict] = []
@@ -467,14 +468,6 @@ async def revoke_permission(app_name: str, resource: str, duration: int) -> None
     app_permissions = PERMISSIONS_STATE.get(app_name)
     if app_permissions and resource in app_permissions:
         app_permissions[resource] = False   # silent revoke
-
-
-def prune_pending_requests() -> None:
-    """Drop abandoned interception records so the queue cannot leak."""
-    cutoff = time.monotonic() - PENDING_MAX_AGE_SECONDS
-    for request_id, entry in list(pending_requests.items()):
-        if entry.get("_created_mono", 0.0) < cutoff:
-            pending_requests.pop(request_id, None)
 
 
 # ---------------------------------------------------------------------------
@@ -836,13 +829,19 @@ app.add_middleware(
 
 BASE_DIR = Path(__file__).resolve().parent
 
+# Browsers heuristically cache an HTML page that has no explicit Cache-Control
+# header, so an edited dashboard can keep rendering stale markup (e.g. the old
+# interception countdown) even after the file on disk changed. Tell the client
+# never to store these pages.
+NO_CACHE_HEADERS = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+
 
 # ---------------------------------------------------------------------------
 # UI routes (serve the dashboard and demo pages from the same origin)
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 async def serve_homepage():
-    return FileResponse(BASE_DIR / "index.html")
+    return FileResponse(BASE_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/{page_name}.html", response_class=HTMLResponse)
@@ -851,7 +850,7 @@ async def serve_html_pages(page_name: str):
     # path converter on Windows, so "../..\secret" would otherwise escape it.
     file_path = (BASE_DIR / f"{page_name}.html").resolve()
     if file_path.parent == BASE_DIR and file_path.is_file():
-        return FileResponse(file_path)
+        return FileResponse(file_path, headers=NO_CACHE_HEADERS)
     # Returning a dict here would be rendered through HTMLResponse and crash;
     # send an explicit 404 JSON payload instead.
     return JSONResponse({"error": "Page not found"}, status_code=404)
@@ -900,7 +899,6 @@ async def request_access(payload: AccessRequest):
             detail=f"Unknown resource: {payload.requested_resource}",
         )
 
-    prune_pending_requests()
     violations = apply_velocity_tracking(app_name)
     permission_on = PERMISSIONS_STATE.get(app_name, {}).get(resource, False)
 
@@ -940,14 +938,11 @@ async def request_access(payload: AccessRequest):
     }
     pending_requests[request_id] = entry
 
-    deadline = time.monotonic() + INTERCEPT_TIMEOUT_SECONDS
-    while entry["status"] == "pending" and time.monotonic() < deadline:
+    # Wait indefinitely for an explicit admin verdict. There is NO auto-timeout
+    # and NO defaulting to the AI suggestion: the request only resolves when an
+    # admin sends Yes/No via POST /resolve_request.
+    while entry["status"] == "pending":
         await asyncio.sleep(INTERCEPT_POLL_SECONDS)
-
-    if entry["status"] == "pending":
-        # Nobody answered: grant this single request without persisting the
-        # permission — the next request will be intercepted again.
-        finalize_request(entry, INTERCEPT_TIMEOUT_VERDICT, "auto-timeout")
 
     result = {
         "request_id": request_id,
@@ -968,17 +963,12 @@ async def request_access(payload: AccessRequest):
 @app.get("/get_pending")
 def get_pending():
     """Return every request still waiting for a human verdict."""
-    now = time.monotonic()
     waiting = []
     for entry in pending_requests.values():
         if entry["status"] != "pending":
             continue
-        public = {k: v for k, v in entry.items() if not k.startswith("_")}
-        elapsed = now - entry.get("_created_mono", now)
-        public["expires_in"] = max(
-            0, int(round(INTERCEPT_TIMEOUT_SECONDS - elapsed))
-        )
-        waiting.append(public)
+        # Drop internal keys (e.g. the monotonic timestamp) before serialising.
+        waiting.append({k: v for k, v in entry.items() if not k.startswith("_")})
 
     waiting.sort(key=lambda e: e["created_at"], reverse=True)
     return waiting
@@ -1185,6 +1175,38 @@ def toggle_permission(payload: PermissionToggle):
         "resource": resource,
         "state": payload.state,
         "message": "Permission updated successfully.",
+    }
+
+
+@app.post("/api/reset_database")
+def reset_database():
+    """
+    Factory-reset the persisted state.
+
+    * Truncates the AccessLogs table (empty log history).
+    * Wipes the Applications table and re-seeds every app with a trust score
+      of 0.
+    * Resets the in-memory trust graph, the notification hub, and the pending
+      interception queue so the dashboard reflects the wipe instantly.
+    """
+    with DB_LOCK:
+        cursor = DB_CONNECTION.cursor()
+        cursor.execute("DELETE FROM AccessLogs")
+        cursor.execute("DELETE FROM Applications")
+        cursor.executemany(
+            "INSERT INTO Applications (app_name, trust_score) VALUES (?, ?)",
+            [(name, 0) for name in PERMISSIONS_STATE],
+        )
+        DB_CONNECTION.commit()
+
+    for name in trust_history:
+        trust_history[name] = [0]
+    notifications.clear()
+    pending_requests.clear()
+
+    return {
+        "success": True,
+        "message": "Database reset: access logs cleared and trust scores zeroed.",
     }
 
 

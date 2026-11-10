@@ -65,9 +65,9 @@
   <div class="relative w-full max-w-sm">
 
     <!-- Toasts -->
-    <div id="toasts" role="status" aria-live="polite" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 space-y-2"></div>
+    <div id="toasts" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 space-y-2"></div>
 
-    <div class="relative rounded-[2rem] border border-white/10 bg-card overflow-hidden shadow-[0_50px_120px_-40px_rgba(0,0,0,.95)] ring-1 ring-white/[.04]">
+    <div class="relative rounded-[2rem] border border-white/10 bg-card overflow-hidden shadow-2xl">
 
       <!-- ============ HEADER ============ -->
       <header class="relative px-5 pt-6 pb-10 bg-gradient-to-br from-wallet2/90 to-wallet/80">
@@ -95,7 +95,7 @@
       <main class="-mt-5 px-4 pb-6 space-y-4">
 
         <!-- Permission request -->
-        <section class="rounded-2xl border border-white/10 bg-card2 p-4 shadow-lg ring-1 ring-inset ring-white/[.03] transition duration-300 ease-in-out hover:border-white/20">
+        <section class="rounded-2xl border border-white/10 bg-card2 p-4 shadow-lg">
           <div class="flex items-center gap-2 mb-3">
             <p class="text-[11px] uppercase tracking-widest text-slate-400">Request Permission</p>
             <span class="ml-auto w-1.5 h-1.5 rounded-full bg-wallet animate-pulse"></span>
@@ -112,7 +112,7 @@
                 class="w-full appearance-none rounded-xl border border-white/15 bg-ink/70
                        pl-3 pr-9 py-3 text-sm text-white
                        focus:outline-none focus:border-wallet focus:ring-2 focus:ring-wallet/40
-                       transition duration-300 ease-in-out disabled:opacity-50">
+                       transition disabled:opacity-50">
                 <option value="location">Location</option>
                 <option value="contacts">Contacts</option>
                 <option value="microphone">Microphone</option>
@@ -134,8 +134,8 @@
             <button id="btnRequest"
               class="shrink-0 inline-flex items-center gap-2 rounded-xl px-4 py-3
                      logo-mark text-sm font-semibold text-white shadow-wallet
-                     active:scale-[.97] transition duration-300 ease-in-out
-                     disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100">
+                     active:scale-[.97] transition
+                     disabled:opacity-60 disabled:cursor-not-allowed">
               <span>Request Access</span>
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4"
                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -144,11 +144,11 @@
             </button>
           </div>
 
-          <p id="requestStatus" role="status" aria-live="polite" class="hidden"></p>
+          <p id="requestStatus" class="hidden"></p>
         </section>
 
         <!-- Permission console -->
-        <section class="rounded-2xl border border-white/10 bg-card2 p-4 shadow-lg ring-1 ring-inset ring-white/[.03] transition duration-300 ease-in-out hover:border-white/20">
+        <section class="rounded-2xl border border-white/10 bg-card2 p-4 shadow-lg">
           <p class="text-[11px] uppercase tracking-widest text-slate-400 mb-3">Permission Activity</p>
           <div id="console" class="h-28 overflow-y-auto text-[11px] leading-relaxed text-slate-400 space-y-1">
             <p class="text-slate-600">No activity yet.</p>
@@ -156,7 +156,7 @@
         </section>
 
         <!-- Recent -->
-        <section class="rounded-2xl border border-white/10 bg-card2 p-4 shadow-lg ring-1 ring-inset ring-white/[.03] transition duration-300 ease-in-out hover:border-white/20">
+        <section class="rounded-2xl border border-white/10 bg-card2 p-4 shadow-lg">
           <p class="text-[11px] uppercase tracking-widest text-slate-400 mb-3">Recent Transactions</p>
           <ul class="space-y-2 text-sm">
             <li class="flex items-center justify-between">
@@ -188,55 +188,36 @@
 const API = "http://127.0.0.1:8000";
 const APP_NAME = "Paytm";
 const TOAST_LIFETIME = 3200;
-const TOAST_LIMIT = 3;
 
 /* ============================================================
    TOASTS
    ============================================================ */
 const toastRoot = document.getElementById("toasts");
 
-const esc = (value) =>
-  String(value).replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
-  );
-
-function dismissToast(el) {
-  if (!el || el.dataset.leaving) return;
-  el.dataset.leaving = "1";
-  el.classList.remove("animate-slidein");
-  el.classList.add("animate-fadeout");
-  window.setTimeout(() => el.remove(), 380);
-}
-
 function showToast(kind, title, detail) {
   const isOk = kind === "ok";
   const el = document.createElement("div");
   el.className =
-    `animate-slidein flex items-start gap-3 rounded-2xl border px-4 py-3
-     backdrop-blur-xl
+    `animate-slidein rounded-xl border px-4 py-3 shadow-xl backdrop-blur
+     flex items-start gap-3
      ${isOk
-        ? "border-ok/40 bg-ok/10 text-ok shadow-[0_24px_60px_-28px_rgba(34,197,94,.65)]"
-        : "border-danger/40 bg-danger/10 text-danger shadow-[0_24px_60px_-28px_rgba(239,68,68,.65)]"}`;
+        ? "bg-ok/15 border-ok/50 text-ok"
+        : "bg-danger/15 border-danger/50 text-danger"}`;
 
   el.innerHTML = `
-    <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border text-[11px] font-bold
-      ${isOk ? "border-ok/40 bg-ok/15" : "border-danger/40 bg-danger/15"}">${isOk ? "✓" : "✕"}</span>
+    <span class="mt-0.5 text-base leading-none">${isOk ? "✓" : "✕"}</span>
     <div class="min-w-0">
-      <p class="text-sm font-bold">${esc(title)}</p>
-      ${detail ? `<p class="mt-0.5 text-[11px] opacity-80 break-words">${esc(detail)}</p>` : ""}
+      <p class="text-sm font-bold">${title}</p>
+      ${detail ? `<p class="text-[11px] opacity-80 mt-0.5 break-words">${detail}</p>` : ""}
     </div>
   `;
 
   toastRoot.appendChild(el);
 
-  // Never let the stack grow: drop the oldest entries instantly.
-  while (toastRoot.children.length > TOAST_LIMIT) {
-    const oldest = toastRoot.firstElementChild;
-    if (!oldest) break;
-    oldest.remove();
-  }
-
-  window.setTimeout(() => dismissToast(el), TOAST_LIFETIME);
+  setTimeout(() => {
+    el.classList.add("animate-fadeout");
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }, TOAST_LIFETIME);
 }
 
 /* ============================================================
@@ -320,8 +301,8 @@ async function requestAccess() {
       body: JSON.stringify({ app_name: APP_NAME, requested_resource: resource }),
     });
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.detail || "HTTP " + res.status);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
 
     setLink(true);
     logConsole(label, data.status);
@@ -335,7 +316,7 @@ async function requestAccess() {
     }
   } catch (err) {
     setLink(false);
-    showToast("error", "Access Denied by E.D.I.T.H. Security", err.message || "Backend unreachable");
+    showToast("error", "Access Denied by E.D.I.T.H. Security", "Backend unreachable");
     logConsole(label, "ERROR");
     setStatus("error", `<span>✕</span><span>No response from E.D.I.T.H.</span>`);
   } finally {
